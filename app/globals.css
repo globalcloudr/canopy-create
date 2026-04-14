@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@source "../node_modules/@canopy/ui";
+
+/* Preserve any existing CSS variables or base layer styles you see in the file below here */
+@import "@canopy/ui/styles.css";
+
+a {
+  color: inherit;
+}
+
+/* Ensure dropdown/select/popover content has an opaque background */
+[data-radix-popper-content-wrapper] > * {
+  background-color: white;
+}
+
+/* Ensure primary (dark) buttons always show white text, even when rendered as <a> via asChild */
+.bg-\[var\(--primary\)\] {
+  color: var(--primary-foreground);
+}

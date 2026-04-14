@@ -1,0 +1,477 @@
+import { createClient } from "@supabase/supabase-js";
+
+import type {
+  CreateApproval,
+  CreateItem,
+  CreateItemComment,
+  CreateItemVersion,
+  CreateRequest,
+  CreateRequestAttachment,
+  CreateProject,
+  Milestone,
+} from "@/lib/create-types";
+import type { ApprovalDecision } from "@/lib/create-status";
+
+// ─── Service client ───────────────────────────────────────────────────────────
+
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error("Supabase environment variables are not configured.");
+  }
+
+  return createClient(url, key);
+}
+
+function requireSingleRow<T>(data: T | null, error: { message: string } | null) {
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Record not found.");
+  }
+
+  return data;
+}
+
+export async function listRequests(
+  workspaceId: string,
+  status?: CreateRequest["status"] | CreateRequest["status"][]
+): Promise<CreateRequest[]> {
+  const client = getServiceClient();
+  let query = client
+    .from("create_requests")
+    .select("*")
+    .eq("workspace_id", workspaceId);
+
+  if (Array.isArray(status) && status.length > 0) {
+    query = query.in("status", status);
+  } else if (typeof status === "string") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as CreateRequest[];
+}
+
+export async function getRequest(
+  workspaceId: string,
+  requestId: string
+): Promise<CreateRequest> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_requests")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", requestId)
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateRequest | null, error);
+}
+
+export async function createRequest(
+  workspaceId: string,
+  payload: Omit<
+    CreateRequest,
+    "id" | "workspace_id" | "created_at" | "updated_at"
+  >
+): Promise<CreateRequest> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_requests")
+    .insert({
+      workspace_id: workspaceId,
+      ...payload,
+    })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateRequest | null, error);
+}
+
+export async function updateRequest(
+  workspaceId: string,
+  requestId: string,
+  payload: Partial<CreateRequest>
+): Promise<CreateRequest> {
+  const client = getServiceClient();
+  const {
+    id: _id,
+    workspace_id: _workspaceId,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    ...updatePayload
+  } = payload;
+
+  const { data, error } = await client
+    .from("create_requests")
+    .update(updatePayload)
+    .eq("workspace_id", workspaceId)
+    .eq("id", requestId)
+    .select("*")
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateRequest | null, error);
+}
+
+export async function listProjects(
+  workspaceId: string,
+  status?: CreateProject["status"] | CreateProject["status"][]
+): Promise<CreateProject[]> {
+  const client = getServiceClient();
+  let query = client
+    .from("create_projects")
+    .select("*")
+    .eq("workspace_id", workspaceId);
+
+  if (Array.isArray(status) && status.length > 0) {
+    query = query.in("status", status);
+  } else if (typeof status === "string") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as CreateProject[];
+}
+
+export async function getProject(
+  workspaceId: string,
+  projectId: string
+): Promise<CreateProject> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_projects")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", projectId)
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateProject | null, error);
+}
+
+export async function createProject(
+  workspaceId: string,
+  payload: Omit<
+    CreateProject,
+    "id" | "workspace_id" | "created_at" | "updated_at"
+  >
+): Promise<CreateProject> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_projects")
+    .insert({
+      workspace_id: workspaceId,
+      ...payload,
+    })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateProject | null, error);
+}
+
+export async function updateProject(
+  workspaceId: string,
+  projectId: string,
+  payload: Partial<CreateProject>
+): Promise<CreateProject> {
+  const client = getServiceClient();
+  const {
+    id: _id,
+    workspace_id: _workspaceId,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    ...updatePayload
+  } = payload;
+
+  const { data, error } = await client
+    .from("create_projects")
+    .update(updatePayload)
+    .eq("workspace_id", workspaceId)
+    .eq("id", projectId)
+    .select("*")
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateProject | null, error);
+}
+
+export async function listProjectItems(
+  workspaceId: string,
+  projectId: string
+): Promise<CreateItem[]> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_items")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as CreateItem[];
+}
+
+export async function createItem(
+  workspaceId: string,
+  payload: Omit<CreateItem, "id" | "workspace_id" | "created_at" | "updated_at">
+): Promise<CreateItem> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_items")
+    .insert({
+      workspace_id: workspaceId,
+      ...payload,
+    })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateItem | null, error);
+}
+
+export async function updateItem(
+  workspaceId: string,
+  itemId: string,
+  payload: Partial<Pick<CreateItem, "title" | "status" | "sort_order" | "plane_issue_id">>
+): Promise<CreateItem> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_items")
+    .update(payload)
+    .eq("workspace_id", workspaceId)
+    .eq("id", itemId)
+    .select("*")
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateItem | null, error);
+}
+
+export async function listMilestones(
+  workspaceId: string,
+  projectId: string
+): Promise<Milestone[]> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_milestones")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Milestone[];
+}
+
+export async function createMilestone(
+  workspaceId: string,
+  projectId: string,
+  title: string
+): Promise<Milestone> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_milestones")
+    .insert({
+      workspace_id: workspaceId,
+      project_id: projectId,
+      title,
+      status: "pending",
+    })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as Milestone | null, error);
+}
+
+export async function updateMilestone(
+  workspaceId: string,
+  milestoneId: string,
+  status: string
+): Promise<Milestone> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_milestones")
+    .update({ status })
+    .eq("workspace_id", workspaceId)
+    .eq("id", milestoneId)
+    .select("*")
+    .maybeSingle();
+
+  return requireSingleRow(data as Milestone | null, error);
+}
+
+// ─── Item versions ────────────────────────────────────────────────────────────
+
+export async function listItemVersions(
+  workspaceId: string,
+  itemId: string
+): Promise<CreateItemVersion[]> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_item_versions")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("item_id", itemId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateItemVersion[];
+}
+
+export async function createItemVersion(
+  workspaceId: string,
+  payload: Omit<CreateItemVersion, "id" | "workspace_id" | "created_at">
+): Promise<CreateItemVersion> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_item_versions")
+    .insert({ workspace_id: workspaceId, ...payload })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateItemVersion | null, error);
+}
+
+// ─── Item comments ────────────────────────────────────────────────────────────
+
+export async function listItemComments(
+  workspaceId: string,
+  itemId: string
+): Promise<CreateItemComment[]> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_item_comments")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("item_id", itemId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateItemComment[];
+}
+
+export async function addItemComment(
+  workspaceId: string,
+  payload: Omit<CreateItemComment, "id" | "workspace_id" | "created_at">
+): Promise<CreateItemComment> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_item_comments")
+    .insert({ workspace_id: workspaceId, ...payload })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateItemComment | null, error);
+}
+
+// ─── Approvals ────────────────────────────────────────────────────────────────
+
+export async function listApprovals(
+  workspaceId: string,
+  itemId: string
+): Promise<CreateApproval[]> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_approvals")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("item_id", itemId)
+    .order("decided_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateApproval[];
+}
+
+export async function submitApproval(
+  workspaceId: string,
+  payload: {
+    item_id: string;
+    version_id: string | null;
+    decision: ApprovalDecision;
+    note: string | null;
+    decided_by: string;
+  }
+): Promise<CreateApproval> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_approvals")
+    .insert({ workspace_id: workspaceId, ...payload })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateApproval | null, error);
+}
+
+// ─── Request attachments ──────────────────────────────────────────────────────
+
+export async function listRequestAttachments(
+  workspaceId: string,
+  requestId: string
+): Promise<CreateRequestAttachment[]> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_request_attachments")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateRequestAttachment[];
+}
+
+export async function addRequestAttachment(
+  workspaceId: string,
+  payload: Omit<CreateRequestAttachment, "id" | "workspace_id" | "created_at">
+): Promise<CreateRequestAttachment> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_request_attachments")
+    .insert({ workspace_id: workspaceId, ...payload })
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return requireSingleRow(data as CreateRequestAttachment | null, error);
+}
