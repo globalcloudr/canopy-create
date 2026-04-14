@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import type {
+  CreateActivityEvent,
   CreateApproval,
   CreateItem,
   CreateItemComment,
@@ -570,4 +571,64 @@ export async function addRequestAttachment(
     .single();
 
   return requireSingleRow(data as CreateRequestAttachment | null, error);
+}
+
+// ─── Item lookup ──────────────────────────────────────────────────────────────
+
+export async function getItem(
+  workspaceId: string,
+  itemId: string
+): Promise<CreateItem> {
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_items")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .eq("id", itemId)
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateItem | null, error);
+}
+
+// ─── Activity feed ────────────────────────────────────────────────────────────
+
+/**
+ * Fire-and-forget activity logger. Never throws — failures are logged to
+ * console so they never surface as user-facing errors.
+ */
+export async function logActivity(
+  workspaceId: string,
+  event: Omit<CreateActivityEvent, "id" | "workspace_id" | "created_at">
+): Promise<void> {
+  try {
+    const client = getServiceClient();
+    const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+    await client
+      .from("create_activity_events")
+      .insert({ workspace_id: resolvedWorkspaceId, ...event });
+  } catch (err) {
+    console.error("[Activity log] Failed to record event:", err);
+  }
+}
+
+export async function listProjectActivity(
+  workspaceId: string,
+  projectId: string,
+  limit = 50
+): Promise<CreateActivityEvent[]> {
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_activity_events")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateActivityEvent[];
 }

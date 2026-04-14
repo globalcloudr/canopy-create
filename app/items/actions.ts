@@ -6,6 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 import {
   addItemComment,
   createItemVersion,
+  getItem,
+  logActivity,
   submitApproval,
   updateItem,
 } from "@/lib/create-data";
@@ -35,6 +37,17 @@ export async function addCommentAction(
     body,
     author_user_id: user.id,
   });
+
+  if (projectId) {
+    const item = await getItem(workspaceId, itemId);
+    await logActivity(workspaceId, {
+      project_id: projectId,
+      item_id: itemId,
+      actor_user_id: user.id,
+      event_type: "comment_added",
+      metadata: { item_title: item.title, preview: body.slice(0, 80) },
+    });
+  }
 
   revalidatePath(`/items/${itemId}`, "page");
 }
@@ -82,6 +95,17 @@ export async function uploadVersionAction(
     created_by: user.id,
   });
 
+  if (projectId) {
+    const item = await getItem(workspaceId, itemId);
+    await logActivity(workspaceId, {
+      project_id: projectId,
+      item_id: itemId,
+      actor_user_id: user.id,
+      event_type: "version_uploaded",
+      metadata: { item_title: item.title, version_label: versionLabel },
+    });
+  }
+
   revalidatePath(`/items/${itemId}`, "page");
   return {};
 }
@@ -89,6 +113,7 @@ export async function uploadVersionAction(
 export async function submitApprovalAction(
   workspaceId: string,
   itemId: string,
+  projectId: string,
   versionId: string | null,
   decision: ApprovalDecision,
   note: string | null
@@ -105,6 +130,17 @@ export async function submitApprovalAction(
     decided_by: user.id,
   });
 
+  if (projectId) {
+    const item = await getItem(workspaceId, itemId);
+    await logActivity(workspaceId, {
+      project_id: projectId,
+      item_id: itemId,
+      actor_user_id: user.id,
+      event_type: "item_approved",
+      metadata: { item_title: item.title, decision },
+    });
+  }
+
   revalidatePath(`/items/${itemId}`, "page");
 }
 
@@ -116,16 +152,28 @@ export async function markDeliveredAction(
 ): Promise<{ error?: string }> {
   if (!workspaceId || !itemId) return { error: "Missing context." };
 
-  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
   if (!isInternalRole(role) && !isPlatformOperator) {
     return { error: "Only internal team members can mark a deliverable as delivered." };
   }
+
+  const item = await getItem(workspaceId, itemId);
 
   await updateItem(workspaceId, itemId, {
     delivered_at: new Date().toISOString(),
     final_version_id: finalVersionId,
     status: "completed",
   });
+
+  if (projectId) {
+    await logActivity(workspaceId, {
+      project_id: projectId,
+      item_id: itemId,
+      actor_user_id: user.id,
+      event_type: "item_delivered",
+      metadata: { item_title: item.title },
+    });
+  }
 
   revalidatePath(`/items/${itemId}`, "page");
   revalidatePath(`/projects/${projectId}`, "page");

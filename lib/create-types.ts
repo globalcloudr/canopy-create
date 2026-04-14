@@ -105,3 +105,24 @@ export interface CreateRequestAttachment {
   uploaded_by: string;
   created_at: string;
 }
+
+export type ActivityEventType =
+  | "project_status_changed"
+  | "milestone_completed"
+  | "milestone_uncompleted"
+  | "item_status_changed"
+  | "version_uploaded"
+  | "comment_added"
+  | "item_approved"
+  | "item_delivered";
+
+export interface CreateActivityEvent {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  item_id: string | null;
+  actor_user_id: string;
+  event_type: ActivityEventType;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}

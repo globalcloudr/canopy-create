@@ -5,10 +5,12 @@ import { AppSurface, Badge, BodyText, Button, Input } from "@canopy/ui";
 import ClientShell from "@/app/_components/client-shell";
 import MilestoneChecklist from "@/app/_components/milestone-checklist";
 import ItemStatusSelect from "@/app/_components/item-status-select";
+import ActivityFeed from "@/app/_components/activity-feed";
 import {
   getProject,
   listMilestones,
   listProjectItems,
+  listProjectActivity,
 } from "@/lib/create-data";
 import {
   addItemAction,
@@ -70,11 +72,12 @@ export default async function ProjectDetailPage({
     );
   }
 
-  const [{ role, isPlatformOperator }, project, milestones, items] = await Promise.all([
+  const [{ role, isPlatformOperator }, project, milestones, items, activityEvents] = await Promise.all([
     getServerActionAccess(workspaceId),
     getProject(workspaceId, projectId),
     listMilestones(workspaceId, projectId),
     listProjectItems(workspaceId, projectId),
+    listProjectActivity(workspaceId, projectId),
   ]);
 
   const canManage = canManageProjects(role, isPlatformOperator);
@@ -106,6 +109,19 @@ export default async function ProjectDetailPage({
       };
     })
   );
+
+  // Resolve actor display names for activity feed
+  const actorIds = [...new Set(activityEvents.map((e) => e.actor_user_id))];
+  const activityNameMap: Record<string, string> = {};
+  if (actorIds.length > 0) {
+    const { data: profiles } = await serviceClient
+      .from("profiles")
+      .select("user_id,full_name,display_name")
+      .in("user_id", actorIds);
+    for (const p of profiles ?? []) {
+      activityNameMap[p.user_id] = p.display_name ?? p.full_name ?? "Team member";
+    }
+  }
 
   const originRequestHref = project.origin_request_id
     ? `/requests/${project.origin_request_id}?workspace=${encodeURIComponent(workspaceId)}`
@@ -310,6 +326,19 @@ export default async function ProjectDetailPage({
             </div>
           </AppSurface>
         )}
+
+        {/* Activity feed */}
+        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+            Activity
+          </p>
+          <BodyText muted className="mt-0.5">
+            A timeline of actions taken on this project.
+          </BodyText>
+          <div className="mt-5">
+            <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
+          </div>
+        </AppSurface>
 
       </div>
     </ClientShell>

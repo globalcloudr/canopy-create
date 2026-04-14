@@ -6,6 +6,9 @@ import { redirect } from "next/navigation";
 import {
   createItem,
   createMilestone,
+  getItem,
+  getProject,
+  logActivity,
   updateItem,
   updateMilestone,
   updateProject,
@@ -14,7 +17,6 @@ import type { ItemStatus, ProjectStatus } from "@/lib/create-status";
 import { getServerActionAccess } from "@/lib/server-auth";
 import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
 import { createPlaneIssue } from "@/lib/plane-client";
-import { getProject } from "@/lib/create-data";
 
 export async function addMilestoneAction(
   workspaceId: string,
@@ -39,22 +41,28 @@ export async function toggleMilestoneStatusAction(
   workspaceId: string,
   projectId: string,
   milestoneId: string,
-  currentStatus: "pending" | "completed"
+  currentStatus: "pending" | "completed",
+  milestoneTitle: string
 ): Promise<void> {
   if (!workspaceId || !projectId || !milestoneId) {
     throw new Error("Workspace, project, and milestone are required.");
   }
 
-  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
   if (!canManageProjects(role, isPlatformOperator)) {
     throw new Error("You do not have permission to update production steps.");
   }
 
-  await updateMilestone(
-    workspaceId,
-    milestoneId,
-    currentStatus === "completed" ? "pending" : "completed"
-  );
+  const newStatus = currentStatus === "completed" ? "pending" : "completed";
+  await updateMilestone(workspaceId, milestoneId, newStatus);
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: null,
+    actor_user_id: user.id,
+    event_type: newStatus === "completed" ? "milestone_completed" : "milestone_uncompleted",
+    metadata: { title: milestoneTitle },
+  });
 
   revalidatePath(`/projects/${projectId}`, "page");
 }
@@ -68,7 +76,7 @@ export async function changeProjectStatus(
     throw new Error("Workspace and project are required.");
   }
 
-  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
   if (!canManageProjects(role, isPlatformOperator)) {
     throw new Error("You do not have permission to update project status.");
   }
@@ -78,8 +86,18 @@ export async function changeProjectStatus(
     throw new Error("Invalid project status.");
   }
 
+  const project = await getProject(workspaceId, projectId);
+
   await updateProject(workspaceId, projectId, {
     status: newStatus as ProjectStatus,
+  });
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: null,
+    actor_user_id: user.id,
+    event_type: "project_status_changed",
+    metadata: { from: project.status, to: newStatus },
   });
 
   revalidatePath(`/projects/${projectId}`);
@@ -137,7 +155,7 @@ export async function changeItemStatusAction(
 ): Promise<void> {
   if (!workspaceId || !itemId) return;
 
-  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
   if (!canUpdateDeliverables(role, isPlatformOperator)) {
     throw new Error("You do not have permission to update deliverable status.");
   }
@@ -145,6 +163,18 @@ export async function changeItemStatusAction(
   const allowedStatuses: ItemStatus[] = ["pending", "in_progress", "in_review", "completed"];
   if (!allowedStatuses.includes(newStatus as ItemStatus)) return;
 
+  const item = await getItem(workspaceId, itemId);
+  const fromStatus = item.status;
+
   await updateItem(workspaceId, itemId, { status: newStatus as ItemStatus });
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: itemId,
+    actor_user_id: user.id,
+    event_type: "item_status_changed",
+    metadata: { item_title: item.title, from: fromStatus, to: newStatus },
+  });
+
   revalidatePath(`/projects/${projectId}`, "page");
 }

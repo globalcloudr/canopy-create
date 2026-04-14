@@ -92,7 +92,8 @@ export default function MilestoneChecklist({
                   workspaceId,
                   projectId,
                   milestone.id,
-                  milestone.status
+                  milestone.status,
+                  milestone.title
                 );
                 router.refresh();
               });

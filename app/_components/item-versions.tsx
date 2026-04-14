@@ -110,6 +110,7 @@ export default function ItemVersions({
     await submitApprovalAction(
       workspaceId,
       itemId,
+      projectId,
       latestVersionId,
       decision,
       approvalNote.trim() || null
