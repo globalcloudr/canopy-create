@@ -18,18 +18,20 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "text-emerald-600",
 };
 
+const DEFAULT_STATUSES = ["pending", "in_progress", "in_review", "completed"];
+
 export default function ItemStatusSelect({
   workspaceId,
   projectId,
   itemId,
   currentStatus,
-  statuses,
+  statuses = DEFAULT_STATUSES,
 }: {
   workspaceId: string;
   projectId: string;
   itemId: string;
   currentStatus: string;
-  statuses: string[];
+  statuses?: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

@@ -190,9 +190,12 @@ export default async function ProjectDetailPage({
                   <span className="w-5 shrink-0 text-[13px] text-[var(--text-muted)]">
                     {index + 1}
                   </span>
-                  <p className="min-w-0 flex-1 text-[14px] font-medium text-[var(--foreground)]">
+                  <Link
+                    href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
+                    className="min-w-0 flex-1 text-[14px] font-medium text-[var(--foreground)] hover:text-[var(--primary)] hover:underline"
+                  >
                     {item.title}
-                  </p>
+                  </Link>
                   <ItemStatusSelect
                     workspaceId={workspaceId}
                     projectId={project.id}
