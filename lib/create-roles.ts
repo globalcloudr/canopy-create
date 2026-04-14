@@ -1,74 +1,105 @@
 /**
  * Canopy Create role model.
  *
- * Roles come from memberships.role in the shared Supabase project.
- * Platform operators (super_admin / platform_staff) have full internal access.
+ * School workspace roles (stored in memberships.role — shared across all
+ * Canopy products):
+ *   owner        Full school workspace control
+ *   admin        Can manage staff access; not the primary owner
+ *   staff        General workspace access for day-to-day work
+ *   social_media Communications staff (social posts, photo uploads)
+ *   uploader     Can add media assets only
+ *   viewer       Read-only access
  *
- * Client roles — submitted by schools:
- *   client_admin   Full client access: submit requests, view all work, approve
- *   client_staff   Submit requests and view their own submissions
+ * These roles identify the user as a school-side client in Canopy Create.
+ * They get the simplified school-facing UX.
  *
- * Internal roles — Akkedis team:
- *   owner          Full workspace control (same as internal_manager + settings)
- *   internal_manager  Triage, convert, assign, update status, approve
- *   designer       View and update deliverable status
- *   developer      View and update deliverable status
- *   reviewer       View and submit approvals
+ * Internal Canopy roles (future — for when designers have workspace
+ * memberships in the designer marketplace):
+ *   internal_manager   Triage, convert, assign, update status
+ *   designer           View and update deliverable status
+ *   developer          View and update deliverable status
+ *   reviewer           View and submit approvals
  *
- * In V1, roles map to two broad permission tiers:
- *   - "internal" — can manage workflow (convert, set status, add deliverables)
- *   - "client"   — can submit requests and view/approve their own work
+ * Platform operators (profiles.platform_role or is_super_admin):
+ *   super_admin       Full platform access — always treated as internal
+ *   platform_staff    Can view all workspaces — always treated as internal
+ *
+ * In practice today, the Canopy team accesses Create as platform operators.
+ * School staff access it as workspace members with one of the school roles.
  */
 
-export type CreateRole =
-  | "owner"
-  | "internal_manager"
-  | "designer"
-  | "developer"
-  | "reviewer"
-  | "client_admin"
-  | "client_staff";
+// ─── School-side roles (actual platform roles) ───────────────────────────────
 
-const INTERNAL_ROLES: CreateRole[] = [
+const SCHOOL_ROLES = [
   "owner",
+  "admin",
+  "staff",
+  "social_media",
+  "uploader",
+  "viewer",
+] as const;
+
+// ─── Internal Canopy roles (future marketplace) ───────────────────────────────
+
+const INTERNAL_ROLES = [
   "internal_manager",
   "designer",
   "developer",
   "reviewer",
-];
+] as const;
 
-const CLIENT_ROLES: CreateRole[] = ["client_admin", "client_staff"];
+export type SchoolRole = (typeof SCHOOL_ROLES)[number];
+export type InternalRole = (typeof INTERNAL_ROLES)[number];
+export type CreateRole = SchoolRole | InternalRole;
 
-/** Roles that can convert requests to projects and manage project lifecycle */
-const MANAGE_PROJECT_ROLES: CreateRole[] = ["owner", "internal_manager"];
+// ─── Role checks ──────────────────────────────────────────────────────────────
 
-/** Roles that can update request status (triage) */
-const TRIAGE_ROLES: CreateRole[] = ["owner", "internal_manager"];
-
-/** Roles that can update deliverable status */
-const UPDATE_DELIVERABLE_ROLES: CreateRole[] = [
-  "owner",
-  "internal_manager",
-  "designer",
-  "developer",
-];
-
-export function isInternalRole(role: string | null): boolean {
-  return INTERNAL_ROLES.includes(role as CreateRole);
-}
-
+/** True for any school workspace member — gets the school-facing UX. */
 export function isClientRole(role: string | null): boolean {
-  return CLIENT_ROLES.includes(role as CreateRole);
+  return SCHOOL_ROLES.includes(role as SchoolRole);
 }
 
-export function canManageProjects(role: string | null, isPlatformOperator: boolean): boolean {
-  return isPlatformOperator || MANAGE_PROJECT_ROLES.includes(role as CreateRole);
+/** True for internal Canopy team roles (future marketplace designers). */
+export function isInternalRole(role: string | null): boolean {
+  return INTERNAL_ROLES.includes(role as InternalRole);
 }
 
-export function canTriageRequests(role: string | null, isPlatformOperator: boolean): boolean {
-  return isPlatformOperator || TRIAGE_ROLES.includes(role as CreateRole);
+// ─── Permission checks ────────────────────────────────────────────────────────
+
+/**
+ * Can convert requests to projects and manage project lifecycle.
+ * Today: platform operators only. Future: internal_manager.
+ */
+export function canManageProjects(
+  role: string | null,
+  isPlatformOperator: boolean
+): boolean {
+  return isPlatformOperator || role === "internal_manager";
 }
 
-export function canUpdateDeliverables(role: string | null, isPlatformOperator: boolean): boolean {
-  return isPlatformOperator || UPDATE_DELIVERABLE_ROLES.includes(role as CreateRole);
+/**
+ * Can update request status (triage).
+ * Today: platform operators only. Future: internal_manager.
+ */
+export function canTriageRequests(
+  role: string | null,
+  isPlatformOperator: boolean
+): boolean {
+  return isPlatformOperator || role === "internal_manager";
+}
+
+/**
+ * Can update deliverable status and upload versions.
+ * Today: platform operators only. Future: designer, developer, internal_manager.
+ */
+export function canUpdateDeliverables(
+  role: string | null,
+  isPlatformOperator: boolean
+): boolean {
+  return (
+    isPlatformOperator ||
+    role === "internal_manager" ||
+    role === "designer" ||
+    role === "developer"
+  );
 }

@@ -3,9 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import { AppSurface, Badge } from "@canopy/ui";
 
 import ClientShell from "@/app/_components/client-shell";
+import SchoolShell from "@/app/_components/school-shell";
 import ItemStatusSelect from "@/app/_components/item-status-select";
 import ItemVersions from "@/app/_components/item-versions";
 import ItemComments from "@/app/_components/item-comments";
+import ClientProofReview from "@/app/_components/client-proof-review";
 import {
   listItemVersions,
   listItemComments,
@@ -14,7 +16,7 @@ import {
 import type { CreateItem } from "@/lib/create-types";
 import type { ApprovalDecision } from "@/lib/create-status";
 import { getServerActionAccess } from "@/lib/server-auth";
-import { isInternalRole, canUpdateDeliverables } from "@/lib/create-roles";
+import { isInternalRole, canUpdateDeliverables, isClientRole } from "@/lib/create-roles";
 
 type ItemDetailPageProps = {
   params: Promise<{ itemId: string }>;
@@ -164,6 +166,72 @@ export default async function ItemDetailPage({
     ? `/projects/${resolvedProjectId}?workspace=${encodeURIComponent(workspaceId)}`
     : `/requests?workspace=${encodeURIComponent(workspaceId)}`;
 
+  // ─── School (client) view ─────────────────────────────────────────────────────
+  if (isClientRole(role) && !isPlatformOperator) {
+    const latestVersion = versions.at(-1) ?? null;
+    const latestApproval = approvals.at(-1) ?? null;
+    const existingApproval = latestApproval
+      ? { decision: latestApproval.decision, note: latestApproval.note }
+      : null;
+
+    return (
+      <SchoolShell activeNav="home">
+        <div className="space-y-5 max-w-2xl">
+
+          {/* Header */}
+          <div>
+            <Link
+              href={resolvedProjectId
+                ? `/projects/${resolvedProjectId}?workspace=${encodeURIComponent(workspaceId)}`
+                : `/?workspace=${encodeURIComponent(workspaceId)}`}
+              className="text-[12px] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+            >
+              ← Back to job
+            </Link>
+            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+              {item.title}
+            </p>
+            {item.status === "in_review" && !item.delivered_at && (
+              <p className="mt-1.5 text-[14px] text-amber-600 font-medium">
+                Your proof is ready — please review and let us know what you think.
+              </p>
+            )}
+          </div>
+
+          {/* Proof review */}
+          <AppSurface className="px-6 py-6 sm:px-8">
+            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
+              {item.delivered_at ? "Your file" : "Proof"}
+            </p>
+            <ClientProofReview
+              workspaceId={workspaceId}
+              itemId={itemId}
+              projectId={resolvedProjectId}
+              latestVersion={latestVersion}
+              existingApproval={existingApproval}
+              isDelivered={!!item.delivered_at}
+            />
+          </AppSurface>
+
+          {/* Messages */}
+          <AppSurface className="px-6 py-6 sm:px-8">
+            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
+              Messages
+            </p>
+            <ItemComments
+              workspaceId={workspaceId}
+              itemId={itemId}
+              projectId={resolvedProjectId}
+              comments={comments}
+            />
+          </AppSurface>
+
+        </div>
+      </SchoolShell>
+    );
+  }
+
+  // ─── Internal view ─────────────────────────────────────────────────────────────
   const projectLabel = resolvedProjectId ? "← Project" : "← Requests";
 
   return (

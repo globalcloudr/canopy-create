@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { AppSurface, Badge, BodyText, Button, Input } from "@canopy/ui";
 
 import ClientShell from "@/app/_components/client-shell";
+import SchoolShell from "@/app/_components/school-shell";
 import MilestoneChecklist from "@/app/_components/milestone-checklist";
 import ItemStatusSelect from "@/app/_components/item-status-select";
 import ActivityFeed from "@/app/_components/activity-feed";
@@ -18,7 +19,7 @@ import {
   changeProjectStatus,
 } from "@/app/projects/actions";
 import { getServerActionAccess } from "@/lib/server-auth";
-import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
+import { canManageProjects, canUpdateDeliverables, isClientRole } from "@/lib/create-roles";
 
 type ProjectDetailPageProps = {
   params: Promise<{ projectId: string }>;
@@ -123,6 +124,170 @@ export default async function ProjectDetailPage({
     }
   }
 
+  // ─── School (client) view ──────────────────────────────────────────────────────
+  if (isClientRole(role) && !isPlatformOperator) {
+    type Stage = "received" | "production" | "review" | "delivered";
+    function computeStage(): Stage {
+      if (!items.length) return "received";
+      if (items.every((i) => !!i.delivered_at)) return "delivered";
+      if (items.some((i) => i.status === "in_review" && !i.delivered_at)) return "review";
+      if (items.some((i) => i.status === "in_progress")) return "production";
+      return "received";
+    }
+    const stage = computeStage();
+    const STAGE_ORDER: Stage[] = ["received", "production", "review", "delivered"];
+    const stageIdx = STAGE_ORDER.indexOf(stage);
+
+    const STEP_LABELS = ["Received", "In Production", "Ready for Review", "Delivered"];
+    const reviewItems = items.filter((i) => i.status === "in_review" && !i.delivered_at);
+
+    const ITEM_STATUS_LABEL: Record<string, string> = {
+      pending: "Not started",
+      in_progress: "In production",
+      in_review: "Ready for review",
+      completed: "Complete",
+    };
+
+    return (
+      <SchoolShell activeNav="home">
+        <div className="space-y-5">
+
+          {/* Header */}
+          <div>
+            <Link
+              href={`/?workspace=${encodeURIComponent(workspaceId)}`}
+              className="text-[12px] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+            >
+              ← My Work
+            </Link>
+            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+              {project.title}
+            </p>
+          </div>
+
+          {/* Journey steps */}
+          <div className="flex items-center gap-0">
+            {STEP_LABELS.map((label, i) => {
+              const isComplete = i < stageIdx;
+              const isActive = i === stageIdx;
+              return (
+                <div key={label} className="flex flex-1 items-center">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div
+                      className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-bold transition-colors ${
+                        isComplete
+                          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                          : isActive
+                            ? "border-[var(--primary)] bg-white text-[var(--primary)]"
+                            : "border-[var(--border)] bg-white text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {isComplete ? "✓" : i + 1}
+                    </div>
+                    <span
+                      className={`text-center text-[11px] font-medium leading-tight ${
+                        isActive ? "text-[var(--primary)]" : isComplete ? "text-[var(--text-muted)]" : "text-[var(--border)]"
+                      }`}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                  {i < STEP_LABELS.length - 1 && (
+                    <div
+                      className={`mx-1 flex-1 h-0.5 mb-5 ${i < stageIdx ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Action needed — proof ready */}
+          {reviewItems.length > 0 && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-amber-600">
+                Your proof is ready
+              </p>
+              <div className="mt-3 space-y-3">
+                {reviewItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-4">
+                    <p className="text-[14px] font-medium text-amber-900 truncate">{item.title}</p>
+                    <Link
+                      href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
+                      className="shrink-0 rounded-xl bg-amber-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-amber-700 transition"
+                    >
+                      Review & give feedback →
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* What we're making */}
+          {items.length > 0 && (
+            <AppSurface className="px-6 py-6 sm:px-8">
+              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                What we're making for you
+              </p>
+              <div className="mt-4 divide-y divide-[var(--border)]">
+                {items.map((item) => {
+                  const isDelivered = !!item.delivered_at;
+                  const df = deliveredFiles.find((f) => f?.item.id === item.id);
+                  return (
+                    <div key={item.id} className="flex items-center justify-between gap-4 py-3.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</p>
+                        <p className={`mt-0.5 text-[12px] font-medium ${
+                          isDelivered ? "text-emerald-600"
+                          : item.status === "in_review" ? "text-amber-600"
+                          : item.status === "in_progress" ? "text-blue-600"
+                          : "text-[var(--text-muted)]"
+                        }`}>
+                          {isDelivered ? "Delivered" : ITEM_STATUS_LABEL[item.status] ?? item.status}
+                        </p>
+                      </div>
+                      {isDelivered && df?.signedUrl && (
+                        <a
+                          href={df.signedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                        >
+                          Download
+                        </a>
+                      )}
+                      {!isDelivered && item.status === "in_review" && (
+                        <Link
+                          href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
+                          className="shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 hover:bg-amber-100 transition"
+                        >
+                          Review →
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </AppSurface>
+          )}
+
+          {/* All delivered */}
+          {stage === "delivered" && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-5 text-center">
+              <p className="text-[15px] font-semibold text-emerald-700">All done!</p>
+              <p className="mt-1 text-[13px] text-emerald-600">
+                Everything has been delivered. Download your files above.
+              </p>
+            </div>
+          )}
+
+        </div>
+      </SchoolShell>
+    );
+  }
+
+  // ─── Internal view ─────────────────────────────────────────────────────────────
   const originRequestHref = project.origin_request_id
     ? `/requests/${project.origin_request_id}?workspace=${encodeURIComponent(workspaceId)}`
     : null;

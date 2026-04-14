@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { AppSurface, Badge, BodyText } from "@canopy/ui";
 
 import ClientShell from "@/app/_components/client-shell";
+import SchoolShell from "@/app/_components/school-shell";
 import {
   listProjects,
   listRequests,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/create-data";
 import { getServerActionAccess } from "@/lib/server-auth";
 import { isInternalRole, isClientRole } from "@/lib/create-roles";
+import type { CreateItem, CreateProject, CreateRequest, Milestone } from "@/lib/create-types";
 
 const ACTIVE_PROJECT_STATUSES = ["draft", "active"] as const;
 const OPEN_REQUEST_STATUSES = ["submitted", "in_progress", "client_review"] as const;
@@ -125,132 +127,183 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const newRequestHref = `/requests/new?workspace=${encodeURIComponent(workspaceId)}`;
 
-  // ─── Client dashboard ─────────────────────────────────────────────────────────
+  // ─── Client (school) dashboard ────────────────────────────────────────────────
   if (isClient) {
+    // Compute a simple stage for each project so we can show plain-English status
+    function projectStage(items: CreateItem[]): "received" | "production" | "review" | "delivered" {
+      if (!items.length) return "received";
+      if (items.every((i) => !!i.delivered_at)) return "delivered";
+      if (items.some((i) => i.status === "in_review" && !i.delivered_at)) return "review";
+      if (items.some((i) => i.status === "in_progress")) return "production";
+      return "received";
+    }
+
+    const STAGE_LABEL: Record<string, string> = {
+      received: "We're reviewing your request",
+      production: "In production",
+      review: "Your proof is ready",
+      delivered: "Delivered",
+    };
+    const STAGE_COLOR: Record<string, string> = {
+      received: "text-[var(--text-muted)]",
+      production: "text-blue-600",
+      review: "text-amber-600",
+      delivered: "text-emerald-600",
+    };
+    const REQUEST_STATUS_LABEL: Record<string, string> = {
+      submitted: "Received — we'll be in touch",
+      in_progress: "We're reviewing your request",
+      client_review: "Your input is needed",
+    };
+
+    // Unified job list: pending requests + active projects, newest first
+    type ClientJob =
+      | { kind: "request"; request: CreateRequest }
+      | { kind: "project"; project: CreateProject; items: CreateItem[]; milestones: Milestone[] };
+
+    const jobs: ClientJob[] = [
+      ...openRequests.map((r) => ({ kind: "request" as const, request: r })),
+      ...activeProjects.map((p) => ({
+        kind: "project" as const,
+        project: p,
+        items: itemsByProject[p.id] ?? [],
+        milestones: milestonesByProject[p.id] ?? [],
+      })),
+    ].sort((a, b) => {
+      const dateA = a.kind === "request" ? a.request.created_at : a.project.created_at;
+      const dateB = b.kind === "request" ? b.request.created_at : b.project.created_at;
+      return dateB.localeCompare(dateA);
+    });
+
+    const proofItems = pendingApproval;
+    const hasActions = proofItems.length > 0;
+    const isEmpty = jobs.length === 0 && deliveredFiles.length === 0;
+
     return (
-      <ClientShell activeNav="home">
-        <div className="flex items-center justify-between">
-          <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
-            Your Work
-          </p>
+      <SchoolShell activeNav="home">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+              My Work
+            </p>
+            <BodyText muted className="mt-0.5">
+              {isEmpty ? "You have no active jobs." : `${jobs.length} active job${jobs.length === 1 ? "" : "s"}`}
+            </BodyText>
+          </div>
           <Link
             href={newRequestHref}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-[14px] font-medium text-white transition hover:opacity-90"
+            className="shrink-0 inline-flex items-center rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-[14px] font-medium text-white transition hover:opacity-90"
           >
-            New Request
+            + New Job
           </Link>
         </div>
 
-        {activeProjects.length === 0 && openRequests.length === 0 ? (
-          <AppSurface className="px-8 py-14 text-center">
-            <p className="text-base font-medium text-[var(--foreground)]">No active work yet</p>
-            <BodyText muted className="mt-1 mb-6">Submit your first request to get started.</BodyText>
+        {isEmpty ? (
+          <AppSurface className="px-8 py-16 text-center">
+            <p className="text-[16px] font-semibold text-[var(--foreground)]">No jobs yet</p>
+            <BodyText muted className="mt-1.5 mb-7 max-w-sm mx-auto">
+              Submit your first job request and we'll get to work. You can track progress, review proofs, and download final files — all in one place.
+            </BodyText>
             <Link
               href={newRequestHref}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-[14px] font-medium text-white transition hover:opacity-90"
+              className="inline-flex items-center rounded-2xl bg-[var(--primary)] px-6 py-3 text-[14px] font-semibold text-white transition hover:opacity-90"
             >
-              Submit a request
+              Submit a job
             </Link>
           </AppSurface>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-4">
 
-            {/* Needs review */}
-            {pendingApproval.length > 0 && (
-              <AppSurface className="px-6 py-6 sm:px-8">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-amber-600">
-                  Awaiting your review
+            {/* Action needed */}
+            {hasActions && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-amber-600">
+                  Action needed
                 </p>
-                <div className="mt-3 divide-y divide-[var(--border)]">
-                  {pendingApproval.map((item) => {
+                <div className="mt-3 space-y-3">
+                  {proofItems.map((item) => {
                     const project = activeProjects.find((p) => p.id === item.project_id);
                     return (
-                      <Link
-                        key={item.id}
-                        href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${item.project_id}`}
-                        className="group flex items-center gap-4 py-3.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                      <div key={item.id} className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-[14px] font-medium text-amber-900 truncate">
                             {item.title}
                           </p>
                           {project && (
-                            <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">{project.title}</p>
+                            <p className="mt-0.5 text-[12px] text-amber-700">{project.title}</p>
                           )}
                         </div>
-                        <Badge>Review proof</Badge>
-                      </Link>
+                        <Link
+                          href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${item.project_id}`}
+                          className="shrink-0 rounded-xl bg-amber-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-amber-700 transition"
+                        >
+                          Review proof →
+                        </Link>
+                      </div>
                     );
                   })}
                 </div>
-              </AppSurface>
+              </div>
             )}
 
-            {/* Active projects with progress */}
-            {activeProjects.length > 0 && (
+            {/* Job list */}
+            {jobs.length > 0 && (
               <AppSurface className="px-6 py-6 sm:px-8">
-                <div className="flex items-center justify-between">
-                  <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                    Active Projects
-                  </p>
-                  <Link
-                    href={`/projects?workspace=${encodeURIComponent(workspaceId)}`}
-                    className="text-[13px] text-[var(--primary)] hover:underline"
-                  >
-                    View all
-                  </Link>
-                </div>
-                <div className="mt-3 divide-y divide-[var(--border)]">
-                  {activeProjects.map((project) => {
-                    const milestones = milestonesByProject[project.id] ?? [];
-                    const items = itemsByProject[project.id] ?? [];
-                    const completed = milestones.filter((m) => m.status === "completed").length;
-                    const total = milestones.length;
-                    const deliveredCount = items.filter((i) => !!i.delivered_at).length;
-                    const inReviewCount = items.filter((i) => i.status === "in_review" && !i.delivered_at).length;
+                <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                  Your Jobs
+                </p>
+                <div className="mt-4 space-y-3">
+                  {jobs.map((job) => {
+                    if (job.kind === "request") {
+                      const label = REQUEST_STATUS_LABEL[job.request.status] ?? job.request.status;
+                      return (
+                        <Link
+                          key={job.request.id}
+                          href={`/requests/${job.request.id}?workspace=${encodeURIComponent(workspaceId)}`}
+                          className="group flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                              {job.request.title}
+                            </p>
+                            <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">{label}</p>
+                          </div>
+                          <span className="shrink-0 text-[var(--text-muted)]">→</span>
+                        </Link>
+                      );
+                    }
+
+                    const stage = projectStage(job.items);
+                    const completed = job.milestones.filter((m) => m.status === "completed").length;
+                    const total = job.milestones.length;
+                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
                     return (
                       <Link
-                        key={project.id}
-                        href={`/projects/${project.id}?workspace=${encodeURIComponent(workspaceId)}`}
-                        className="group block py-4"
+                        key={job.project.id}
+                        href={`/projects/${job.project.id}?workspace=${encodeURIComponent(workspaceId)}`}
+                        className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                              {project.title}
-                            </p>
-                            <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-                              {formatLabel(project.workflow_family)}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 flex-wrap justify-end gap-2">
-                            {inReviewCount > 0 && (
-                              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
-                                {inReviewCount} for review
-                              </span>
-                            )}
-                            {deliveredCount > 0 && (
-                              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                                {deliveredCount} delivered
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                            {job.project.title}
+                          </p>
+                          <span className={`shrink-0 text-[12px] font-medium ${STAGE_COLOR[stage]}`}>
+                            {STAGE_LABEL[stage]}
+                          </span>
                         </div>
-
-                        {/* Milestone progress */}
                         {total > 0 && (
                           <div className="mt-3">
-                            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
-                              <span>Production progress</span>
-                              <span>{completed} / {total} steps</span>
-                            </div>
-                            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
                               <div
                                 className="h-full rounded-full bg-[var(--primary)] transition-all"
-                                style={{ width: `${Math.round((completed / total) * 100)}%` }}
+                                style={{ width: `${pct}%` }}
                               />
                             </div>
+                            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                              {completed} of {total} steps complete
+                            </p>
                           </div>
                         )}
                       </Link>
@@ -260,60 +313,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </AppSurface>
             )}
 
-            {/* Open requests */}
-            {openRequests.length > 0 && (
-              <AppSurface className="px-6 py-6 sm:px-8">
-                <div className="flex items-center justify-between">
-                  <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                    Your Requests
-                  </p>
-                  <Link
-                    href={`/requests?workspace=${encodeURIComponent(workspaceId)}`}
-                    className="text-[13px] text-[var(--primary)] hover:underline"
-                  >
-                    View all
-                  </Link>
-                </div>
-                <div className="mt-3 divide-y divide-[var(--border)]">
-                  {openRequests.slice(0, 5).map((request) => (
-                    <Link
-                      key={request.id}
-                      href={`/requests/${request.id}?workspace=${encodeURIComponent(workspaceId)}`}
-                      className="group flex items-center gap-4 py-3.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                          {request.title}
-                        </p>
-                        <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-                          {formatLabel(request.request_type)}
-                        </p>
-                      </div>
-                      <span className={`text-[12px] font-medium ${statusColor(request.status)}`}>
-                        {formatLabel(request.status)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </AppSurface>
-            )}
-
             {/* Delivered files */}
             {deliveredFiles.length > 0 && (
               <AppSurface className="px-6 py-6 sm:px-8">
                 <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                  Delivered Files
+                  Your Files
                 </p>
-                <BodyText muted className="mt-0.5">Ready to download.</BodyText>
-                <div className="mt-3 divide-y divide-[var(--border)]">
+                <BodyText muted className="mt-0.5">Completed deliverables ready to download.</BodyText>
+                <div className="mt-4 space-y-3">
                   {deliveredFiles.map((f) => f && (
-                    <div key={f.item.id} className="flex items-center justify-between gap-4 py-3.5">
+                    <div key={f.item.id} className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
                       <div className="min-w-0">
-                        <p className="truncate text-[14px] font-medium text-[var(--foreground)]">
+                        <p className="truncate text-[14px] font-semibold text-emerald-900">
                           {f.item.title}
                         </p>
-                        <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-                          {f.project?.title} · {f.item.delivered_at ? formatDate(f.item.delivered_at) : ""}
+                        <p className="mt-0.5 text-[12px] text-emerald-700">
+                          {f.project?.title}{f.item.delivered_at ? ` · Delivered ${formatDate(f.item.delivered_at)}` : ""}
                         </p>
                       </div>
                       {f.signedUrl ? (
@@ -321,14 +336,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                           href={f.signedUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
+                          className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700 transition"
                         >
                           Download
                         </a>
                       ) : (
                         <Link
                           href={`/items/${f.item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${f.item.project_id}`}
-                          className="shrink-0 text-[12px] text-[var(--primary)] hover:underline"
+                          className="shrink-0 text-[13px] font-medium text-emerald-700 hover:underline"
                         >
                           View
                         </Link>
@@ -338,9 +353,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </div>
               </AppSurface>
             )}
+
           </div>
         )}
-      </ClientShell>
+      </SchoolShell>
     );
   }
 
