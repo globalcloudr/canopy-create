@@ -155,11 +155,23 @@ Create should link to those assets rather than re-owning them where possible.
 canopy-create/
   app/
     _components/
+      client-shell.tsx
       product-shell.tsx
+      request-type-picker.tsx
+      milestone-checklist.tsx
     api/
       app-session/
       auth/exchange-handoff/
       launcher-products/
+    projects/
+      [projectId]/
+      actions.ts
+    requests/
+      [requestId]/
+      new/
+      actions.ts
+    loading.tsx
+    error.tsx
     globals.css
     layout.tsx
     page.tsx
@@ -168,19 +180,47 @@ canopy-create/
     PRD.md
     progress.md
   lib/
-    product-data.ts
+    create-data.ts
+    create-request-types.ts
+    create-status.ts
+    create-types.ts
+    create-validators.ts
     server-auth.ts
     supabase-client.ts
     workspace-client.ts
     workspace-href.ts
 ```
 
-## Current Scaffold Notes
+## Current Implementation Notes
 
-- The repo still uses the generic scaffold data layer name `lib/product-data.ts`
-- Product-specific Create tables and APIs are not implemented yet
-- Basic shell/session/handoff pieces are already in place
-- Product key is currently set to `create_canopy` in the session route scaffold
+- The product key is `create_canopy`
+- The repo now has product-specific tables and a working central data layer in `lib/create-data.ts`
+- Request creation, request detail, request conversion, project detail, project status, and milestone tracking are implemented
+- App Router loading and error boundaries are implemented
+- Portal handoff/session plumbing is in place inside this repo
+- Portal-side launch enablement in `canopy-platform` still needs to be completed before Create can be launched like Stories/Reach from the live Portal
+
+## Current Domain Model
+
+Implemented types and tables:
+- `create_requests`
+- `create_projects`
+- `create_items`
+- `create_milestones`
+
+Implemented request families:
+- `design_production`
+- `website_update`
+- `managed_communications`
+
+Implemented request forms:
+- design project
+- website update
+- managed newsletter
+- social request
+
+Implemented request details storage:
+- `create_requests.details` as JSON payload for specialized brief fields
 
 ## Rules
 
@@ -188,6 +228,7 @@ canopy-create/
 - Treat requests, revisions, approvals, and delivery as first-class objects
 - Support recurring catalog/source-document workflows from the start
 - Keep all data scoped by `workspace_id`
+- Keep all Supabase reads/writes in `lib/create-data.ts`
 - Use `@canopy/ui` for interface work
 - Use `photovault` as the asset reference layer when reusable brand/media assets are involved
 - Run `npm run build` before considering changes complete

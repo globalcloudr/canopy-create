@@ -3,7 +3,7 @@
 Client-facing request, production, revision, and delivery system for the creative and digital services provided to school clients.
 
 **GitHub**: https://github.com/globalcloudr/canopy-create  
-**Status**: Product definition and scaffold alignment in progress  
+**Status**: Active development — core request, project, and milestone workflow is live in repo  
 **Live URL**: Not deployed yet
 
 ## What Canopy Create Is
@@ -67,7 +67,7 @@ Recurring workflows such as catalogs must also support:
 - client copy updates
 - proof and correction rounds
 
-## Planned Product Shape
+## Current Product Shape
 
 Core product areas:
 - requests
@@ -85,19 +85,35 @@ Integrations:
 
 ## Current Repo State
 
-This repo started from the canonical Canopy product scaffold and is now being aligned to the Canopy Create product definition.
+This repo started from the canonical Canopy product scaffold and now has the first working Canopy Create product slice in place.
 
 Currently present:
-- Next.js 16 / React 19 / TypeScript / Tailwind v4 scaffold
-- Portal handoff exchange
-- server-backed workspace session
-- in-app product switcher shell
-- basic dashboard and settings placeholders
+- Next.js 16 / React 19 / TypeScript / Tailwind v4 app shell
+- Portal handoff exchange and workspace-backed product session
+- overview dashboard with active/open workspace summaries
+- requests directory with active/all filtering
+- projects directory with active/all filtering
+- new request flow with typed request-family picker
+- specialized V1 request forms:
+  - design project
+  - website update
+  - managed newsletter
+  - social request
+- request detail view with structured brief rendering
+- request-to-project conversion flow
+- project detail view with:
+  - project status controls
+  - milestone checklist
+  - milestone add / complete / reopen behavior
+- route-level loading state and error boundary
 
 Still to do:
-- create the actual Create domain model and routes
-- replace generic scaffold data layer with Create-specific tables
-- define product entitlement and register it in `canopy-platform`
+- richer deliverables tracking under projects
+- approvals, revisions, and file delivery workflow
+- request attachments and source-document handling
+- PhotoVault asset linking
+- Portal launch integration completion in `canopy-platform`
+- deployment and production smoke coverage
 
 ## How to Run
 
@@ -110,15 +126,38 @@ npm run dev
 
 Requires Node 20 (pinned in `.nvmrc`).
 
+Local dev ports:
+- `canopy-platform` Portal: `http://localhost:3000`
+- `canopy-create`: `http://localhost:3003`
+
 ## Environment Variables
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_PORTAL_URL=https://usecanopy.school
+NEXT_PUBLIC_APP_URL=http://localhost:3003
+NEXT_PUBLIC_PORTAL_URL=http://localhost:3000
 ```
+
+For production / preview deployments, `NEXT_PUBLIC_PORTAL_URL` should point to the real Portal host and `NEXT_PUBLIC_APP_URL` should point to the deployed Create app.
+
+## Data Model Status
+
+Current implemented tables / migrations:
+- `create_requests`
+- `create_projects`
+- `create_items`
+- `create_milestones`
+- request `details` JSON payload support
+
+Current implemented product flows:
+- create request
+- view request
+- convert request to project
+- view project
+- manage project milestones
+- manage project status
 
 ## Docs
 
