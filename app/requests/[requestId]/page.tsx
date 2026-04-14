@@ -135,8 +135,15 @@ export default async function RequestDetailPage({
     );
   }
 
-  const [{ role, isPlatformOperator }, request, rawAttachments] = await Promise.all([
-    getServerActionAccess(workspaceId),
+  let role: string | null = null;
+  let isPlatformOperator = false;
+  try {
+    ({ role, isPlatformOperator } = await getServerActionAccess(workspaceId));
+  } catch {
+    return <ClientShell activeNav="requests"><div /></ClientShell>;
+  }
+
+  const [request, rawAttachments] = await Promise.all([
     getRequest(workspaceId, requestId),
     listRequestAttachments(workspaceId, requestId),
   ]);

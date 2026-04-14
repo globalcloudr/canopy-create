@@ -74,8 +74,15 @@ export default async function ProjectDetailPage({
     );
   }
 
-  const [{ role, isPlatformOperator }, project, milestones, items, activityEvents] = await Promise.all([
-    getServerActionAccess(workspaceId),
+  let role: string | null = null;
+  let isPlatformOperator = false;
+  try {
+    ({ role, isPlatformOperator } = await getServerActionAccess(workspaceId));
+  } catch {
+    return <ClientShell activeNav="projects"><div /></ClientShell>;
+  }
+
+  const [project, milestones, items, activityEvents] = await Promise.all([
     getProject(workspaceId, projectId),
     listMilestones(workspaceId, projectId),
     listProjectItems(workspaceId, projectId),

@@ -63,7 +63,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     );
   }
 
-  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  // Handoff launch: the portal redirect includes ?launch= before the session is
+  // established. The server component runs before ProductShell exchanges the code,
+  // so getServerActionAccess may throw "Authentication required." Return an empty
+  // shell — ProductShell will exchange the code and trigger a re-render.
+  let role: string | null = null;
+  let isPlatformOperator = false;
+  try {
+    ({ role, isPlatformOperator } = await getServerActionAccess(workspaceId));
+  } catch {
+    return <ClientShell activeNav="home"><div /></ClientShell>;
+  }
   const isClient = isClientRole(role) && !isPlatformOperator;
   const isInternal = isInternalRole(role) || isPlatformOperator;
 

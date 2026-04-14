@@ -99,8 +99,15 @@ export default async function ItemDetailPage({
   const resolvedProjectId = projectId || item.project_id || "";
 
   // Load role + related data in parallel
-  const [{ role, isPlatformOperator }, rawVersions, rawComments, rawApprovals] = await Promise.all([
-    getServerActionAccess(workspaceId),
+  let role: string | null = null;
+  let isPlatformOperator = false;
+  try {
+    ({ role, isPlatformOperator } = await getServerActionAccess(workspaceId));
+  } catch {
+    return <ClientShell activeNav="requests"><div /></ClientShell>;
+  }
+
+  const [rawVersions, rawComments, rawApprovals] = await Promise.all([
     listItemVersions(workspaceId, itemId),
     listItemComments(workspaceId, itemId),
     listApprovals(workspaceId, itemId),
