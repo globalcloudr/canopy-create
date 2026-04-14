@@ -31,10 +31,12 @@ export default function MilestoneChecklist({
   workspaceId,
   projectId,
   milestones,
+  canToggle = false,
 }: {
   workspaceId: string;
   projectId: string;
   milestones: Milestone[];
+  canToggle?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -51,6 +53,34 @@ export default function MilestoneChecklist({
     <div className="divide-y divide-[var(--border)]">
       {milestones.map((milestone) => {
         const done = milestone.status === "completed";
+
+        const icon = done ? (
+          <CheckCircleIcon className="h-5 w-5 shrink-0 text-[var(--primary)]" />
+        ) : (
+          <CircleIcon className="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
+        );
+
+        const label = (
+          <span
+            className={
+              done
+                ? "text-[15px] text-[var(--text-muted)] line-through"
+                : "text-[15px] text-[var(--foreground)]"
+            }
+          >
+            {milestone.title}
+          </span>
+        );
+
+        if (!canToggle) {
+          return (
+            <div key={milestone.id} className="flex items-center gap-3 py-3.5">
+              {icon}
+              {label}
+            </div>
+          );
+        }
+
         return (
           <button
             key={milestone.id}
@@ -69,20 +99,8 @@ export default function MilestoneChecklist({
             }}
             className="group flex w-full items-center gap-3 py-3.5 text-left transition hover:opacity-80 disabled:opacity-50"
           >
-            {done ? (
-              <CheckCircleIcon className="h-5 w-5 shrink-0 text-[var(--primary)]" />
-            ) : (
-              <CircleIcon className="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
-            )}
-            <span
-              className={
-                done
-                  ? "text-[15px] text-[var(--text-muted)] line-through"
-                  : "text-[15px] text-[var(--foreground)]"
-              }
-            >
-              {milestone.title}
-            </span>
+            {icon}
+            {label}
           </button>
         );
       })}

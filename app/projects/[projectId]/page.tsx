@@ -14,6 +14,8 @@ import {
   addMilestoneAction,
   changeProjectStatus,
 } from "@/app/projects/actions";
+import { getServerActionAccess } from "@/lib/server-auth";
+import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
 
 type ProjectDetailPageProps = {
   params: Promise<{ projectId: string }>;
@@ -67,11 +69,15 @@ export default async function ProjectDetailPage({
     );
   }
 
-  const [project, milestones, items] = await Promise.all([
+  const [{ role, isPlatformOperator }, project, milestones, items] = await Promise.all([
+    getServerActionAccess(workspaceId),
     getProject(workspaceId, projectId),
     listMilestones(workspaceId, projectId),
     listProjectItems(workspaceId, projectId),
   ]);
+
+  const canManage = canManageProjects(role, isPlatformOperator);
+  const canUpdateStatus = canUpdateDeliverables(role, isPlatformOperator);
 
   const originRequestHref = project.origin_request_id
     ? `/requests/${project.origin_request_id}?workspace=${encodeURIComponent(workspaceId)}`
@@ -117,21 +123,23 @@ export default async function ProjectDetailPage({
             </div>
           </div>
 
-          <div className="flex shrink-0 gap-2">
-            {PROJECT_STATUS_OPTIONS.map(({ value, label }) => {
-              const action = changeProjectStatus.bind(null, workspaceId, project.id, value);
-              return (
-                <form key={value} action={action}>
-                  <Button
-                    type="submit"
-                    variant={project.status === value ? "primary" : "secondary"}
-                  >
-                    {label}
-                  </Button>
-                </form>
-              );
-            })}
-          </div>
+          {canManage && (
+            <div className="flex shrink-0 gap-2">
+              {PROJECT_STATUS_OPTIONS.map(({ value, label }) => {
+                const action = changeProjectStatus.bind(null, workspaceId, project.id, value);
+                return (
+                  <form key={value} action={action}>
+                    <Button
+                      type="submit"
+                      variant={project.status === value ? "primary" : "secondary"}
+                    >
+                      {label}
+                    </Button>
+                  </form>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Production steps */}
@@ -163,13 +171,16 @@ export default async function ProjectDetailPage({
               workspaceId={workspaceId}
               projectId={project.id}
               milestones={milestones}
+              canToggle={canManage}
             />
           </div>
 
-          <form action={addMilestoneForProject} className="mt-4 flex gap-3">
-            <Input name="title" placeholder="Add a step…" className="flex-1 text-sm" />
-            <Button type="submit" variant="secondary">Add</Button>
-          </form>
+          {canManage && (
+            <form action={addMilestoneForProject} className="mt-4 flex gap-3">
+              <Input name="title" placeholder="Add a step…" className="flex-1 text-sm" />
+              <Button type="submit" variant="secondary">Add</Button>
+            </form>
+          )}
         </AppSurface>
 
         {/* Deliverables */}
@@ -196,22 +207,30 @@ export default async function ProjectDetailPage({
                   >
                     {item.title}
                   </Link>
-                  <ItemStatusSelect
-                    workspaceId={workspaceId}
-                    projectId={project.id}
-                    itemId={item.id}
-                    currentStatus={item.status}
-                    statuses={[...ITEM_STATUSES]}
-                  />
+                  {canUpdateStatus ? (
+                    <ItemStatusSelect
+                      workspaceId={workspaceId}
+                      projectId={project.id}
+                      itemId={item.id}
+                      currentStatus={item.status}
+                      statuses={[...ITEM_STATUSES]}
+                    />
+                  ) : (
+                    <span className="text-[13px] font-medium text-[var(--text-muted)]">
+                      {formatLabel(item.status)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          <form action={addItemForProject} className="mt-4 flex gap-3">
-            <Input name="title" placeholder="Add a deliverable…" className="flex-1 text-sm" />
-            <Button type="submit" variant="secondary">Add</Button>
-          </form>
+          {canManage && (
+            <form action={addItemForProject} className="mt-4 flex gap-3">
+              <Input name="title" placeholder="Add a deliverable…" className="flex-1 text-sm" />
+              <Button type="submit" variant="secondary">Add</Button>
+            </form>
+          )}
         </AppSurface>
 
       </div>

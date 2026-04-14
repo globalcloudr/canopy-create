@@ -45,6 +45,11 @@ export async function toggleMilestoneStatusAction(
     throw new Error("Workspace, project, and milestone are required.");
   }
 
+  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  if (!canManageProjects(role, isPlatformOperator)) {
+    throw new Error("You do not have permission to update production steps.");
+  }
+
   await updateMilestone(
     workspaceId,
     milestoneId,

@@ -13,6 +13,8 @@ import {
 } from "@/lib/create-data";
 import type { CreateItem } from "@/lib/create-types";
 import type { ApprovalDecision } from "@/lib/create-status";
+import { getServerActionAccess } from "@/lib/server-auth";
+import { isInternalRole, canUpdateDeliverables } from "@/lib/create-roles";
 
 type ItemDetailPageProps = {
   params: Promise<{ itemId: string }>;
@@ -94,12 +96,16 @@ export default async function ItemDetailPage({
 
   const resolvedProjectId = projectId || item.project_id || "";
 
-  // Load related data in parallel
-  const [rawVersions, rawComments, rawApprovals] = await Promise.all([
+  // Load role + related data in parallel
+  const [{ role, isPlatformOperator }, rawVersions, rawComments, rawApprovals] = await Promise.all([
+    getServerActionAccess(workspaceId),
     listItemVersions(workspaceId, itemId),
     listItemComments(workspaceId, itemId),
     listApprovals(workspaceId, itemId),
   ]);
+
+  const canUploadVersion = isInternalRole(role) || isPlatformOperator;
+  const canUpdateStatus = canUpdateDeliverables(role, isPlatformOperator);
 
   // Generate signed URLs for versions
   const storageClient = serviceClient.storage.from("originals");
@@ -177,12 +183,16 @@ export default async function ItemDetailPage({
               {item.title}
             </p>
             <div className="shrink-0">
-              <ItemStatusSelect
-                workspaceId={workspaceId}
-                projectId={resolvedProjectId}
-                itemId={itemId}
-                currentStatus={item.status}
-              />
+              {canUpdateStatus ? (
+                <ItemStatusSelect
+                  workspaceId={workspaceId}
+                  projectId={resolvedProjectId}
+                  itemId={itemId}
+                  currentStatus={item.status}
+                />
+              ) : (
+                <Badge>{formatLabel(item.status)}</Badge>
+              )}
             </div>
           </div>
           <div className="mt-2">
@@ -201,6 +211,7 @@ export default async function ItemDetailPage({
               versions={versions}
               approvals={approvals}
               latestVersionId={latestVersionId}
+              canUpload={canUploadVersion}
             />
           </AppSurface>
 

@@ -31,6 +31,7 @@ type Props = {
   versions: Version[];
   approvals: Approval[];
   latestVersionId: string | null;
+  canUpload: boolean;
 };
 
 const DECISION_LABELS: Record<ApprovalDecision, string> = {
@@ -60,6 +61,7 @@ export default function ItemVersions({
   versions,
   approvals,
   latestVersionId,
+  canUpload,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,16 +116,18 @@ export default function ItemVersions({
           <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
             Versions
           </p>
-          <button
-            type="button"
-            onClick={() => setShowUploadForm((v) => !v)}
-            className="rounded-lg px-2.5 py-1 text-[12px] font-medium text-[var(--primary)] hover:bg-[var(--border)] transition"
-          >
-            {showUploadForm ? "Cancel" : "+ Upload version"}
-          </button>
+          {canUpload && (
+            <button
+              type="button"
+              onClick={() => setShowUploadForm((v) => !v)}
+              className="rounded-lg px-2.5 py-1 text-[12px] font-medium text-[var(--primary)] hover:bg-[var(--border)] transition"
+            >
+              {showUploadForm ? "Cancel" : "+ Upload version"}
+            </button>
+          )}
         </div>
 
-        {showUploadForm && (
+        {canUpload && showUploadForm && (
           <form ref={formRef} action={handleUpload} className="mt-3 space-y-3 rounded-xl border border-[var(--border)] p-4">
             <div>
               <label className="block text-[12px] font-medium text-[var(--text-muted)] mb-1">

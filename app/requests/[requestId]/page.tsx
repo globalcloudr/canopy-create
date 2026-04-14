@@ -10,6 +10,8 @@ import {
 } from "@/app/requests/actions";
 import { getRequest, listRequestAttachments } from "@/lib/create-data";
 import type { RequestStatus } from "@/lib/create-status";
+import { getServerActionAccess } from "@/lib/server-auth";
+import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
 
 type RequestDetailPageProps = {
   params: Promise<{ requestId: string }>;
@@ -132,10 +134,14 @@ export default async function RequestDetailPage({
     );
   }
 
-  const [request, rawAttachments] = await Promise.all([
+  const [{ role, isPlatformOperator }, request, rawAttachments] = await Promise.all([
+    getServerActionAccess(workspaceId),
     getRequest(workspaceId, requestId),
     listRequestAttachments(workspaceId, requestId),
   ]);
+
+  const canManage = canManageProjects(role, isPlatformOperator);
+  const canTriage = canTriageRequests(role, isPlatformOperator);
 
   // Generate short-lived signed URLs for each attachment
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -200,7 +206,7 @@ export default async function RequestDetailPage({
               <Button asChild>
                 <Link href={convertedProjectHref}>Open Project</Link>
               </Button>
-            ) : (
+            ) : canManage ? (
               <form
                 action={async () => {
                   "use server";
@@ -209,7 +215,7 @@ export default async function RequestDetailPage({
               >
                 <Button type="submit">Convert to Project</Button>
               </form>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -235,8 +241,8 @@ export default async function RequestDetailPage({
           {/* Sidebar */}
           <div className="space-y-5">
 
-            {/* Status controls — hidden once converted */}
-            {!isConverted && (
+            {/* Status controls — internal team only, hidden once converted */}
+            {!isConverted && canTriage && (
               <AppSurface className="px-6 py-6 sm:px-8">
                 <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
                   Status
