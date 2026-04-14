@@ -19,7 +19,7 @@ import {
   type CreateRequestSubmissionInput,
 } from "@/lib/create-validators";
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
-import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
+import { canManageProjects, canTriageRequests, isClientRole } from "@/lib/create-roles";
 import { createPlaneProject } from "@/lib/plane-client";
 
 export type CreateRequestActionState = {
@@ -79,7 +79,11 @@ export async function submitCreateRequestAction(
   }
 
   const input = parsed.data;
-  const user = await getServerActionUser();
+  const [user, { role, isPlatformOperator }] = await Promise.all([
+    getServerActionUser(),
+    getServerActionAccess(workspaceId),
+  ]);
+  const schoolUser = isClientRole(role) && !isPlatformOperator;
 
   await createRequest(workspaceId, {
     title: input.title,
@@ -94,6 +98,9 @@ export async function submitCreateRequestAction(
     converted_item_id: null,
   });
 
+  if (schoolUser) {
+    redirect(`/?workspace=${encodeURIComponent(workspaceId)}`);
+  }
   redirect(`/requests?workspace=${encodeURIComponent(workspaceId)}`);
 }
 

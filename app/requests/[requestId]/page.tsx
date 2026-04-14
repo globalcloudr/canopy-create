@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { AppSurface, Badge, BodyText, Button } from "@canopy/ui";
 
 import ClientShell from "@/app/_components/client-shell";
+import SchoolShell from "@/app/_components/school-shell";
 import RequestAttachments from "@/app/_components/request-attachments";
 import {
   changeRequestStatus,
@@ -11,7 +12,7 @@ import {
 import { getRequest, listRequestAttachments } from "@/lib/create-data";
 import type { RequestStatus } from "@/lib/create-status";
 import { getServerActionAccess } from "@/lib/server-auth";
-import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
+import { canManageProjects, canTriageRequests, isClientRole } from "@/lib/create-roles";
 
 type RequestDetailPageProps = {
   params: Promise<{ requestId: string }>;
@@ -142,6 +143,7 @@ export default async function RequestDetailPage({
 
   const canManage = canManageProjects(role, isPlatformOperator);
   const canTriage = canTriageRequests(role, isPlatformOperator);
+  const schoolUser = isClientRole(role) && !isPlatformOperator;
 
   // Generate short-lived signed URLs for each attachment
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -174,6 +176,76 @@ export default async function RequestDetailPage({
     : null;
   const isConverted = request.status === "converted" && !!convertedProjectHref;
 
+  // ─── School (client) view ─────────────────────────────────────────────────────
+  if (schoolUser) {
+    const statusMessage: Record<string, string> = {
+      submitted:    "We've received your job and we'll be in touch soon.",
+      in_progress:  "We're working on this now.",
+      client_review: "We're waiting on your feedback.",
+      completed:    "This job is complete.",
+      converted:    "We're working on this now.",
+    };
+
+    return (
+      <SchoolShell activeNav="home">
+        <div className="space-y-5 max-w-2xl">
+          <div>
+            <Link
+              href={`/?workspace=${encodeURIComponent(workspaceId)}`}
+              className="text-[12px] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+            >
+              ← My Work
+            </Link>
+            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+              {request.title}
+            </p>
+            <p className="mt-1.5 text-[14px] text-[var(--text-muted)]">
+              {statusMessage[request.status] ?? "We've received your job."}
+            </p>
+          </div>
+
+          {isConverted && convertedProjectHref && (
+            <AppSurface className="px-6 py-5 sm:px-8">
+              <p className="text-[15px] font-medium text-[var(--foreground)]">
+                Your job is in progress.{" "}
+                <Link
+                  href={convertedProjectHref}
+                  className="text-[var(--primary)] hover:underline"
+                >
+                  View details →
+                </Link>
+              </p>
+            </AppSurface>
+          )}
+
+          {briefFields.length > 0 && (
+            <AppSurface className="px-6 py-6 sm:px-8">
+              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-2">
+                What you submitted
+              </p>
+              <dl className="divide-y divide-[var(--border)]">
+                {briefFields.map(({ key, def, value }) => (
+                  <BriefField key={key} label={def.label} value={value} hint={def.hint} />
+                ))}
+              </dl>
+            </AppSurface>
+          )}
+
+          {attachments.length > 0 && (
+            <AppSurface className="px-6 py-6 sm:px-8">
+              <RequestAttachments
+                workspaceId={workspaceId}
+                requestId={requestId}
+                attachments={attachments}
+              />
+            </AppSurface>
+          )}
+        </div>
+      </SchoolShell>
+    );
+  }
+
+  // ─── Internal view ─────────────────────────────────────────────────────────────
   return (
     <ClientShell activeNav="requests">
       <div className="space-y-5">
