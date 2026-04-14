@@ -5,8 +5,8 @@ Canopy Create is a Canopy product for client request intake, internal creative p
 It should be treated as:
 - a client services workflow product
 - not generic PM software
-- not a freelancer marketplace in V1
-- but architected so freelancer assignment can be added later
+- not a freelancer marketplace in V1 — but architected so freelancer assignment can be added later
+- an integration layer over Plane (the production engine), exactly as Canopy Community wraps Campaign Monitor and Canopy Reach wraps Facebook/LinkedIn
 
 ## Repos
 
@@ -17,218 +17,188 @@ It should be treated as:
 | `photovault` | PhotoVault by Canopy — brand/media assets and archive |
 | `canopy-stories` | Canopy Stories |
 | `canopy-reach` | Canopy Reach |
+| `canopy-community` | Canopy Community |
 
 All repos share one Supabase project.
 
 ## Tech Stack
 
-- **Framework**: Next.js 16, React 19, TypeScript, Node 20
+- **Framework**: Next.js 16, React 19, TypeScript, Node 20 (pinned via `.nvmrc`)
 - **Styling**: Tailwind CSS v4
 - **UI**: `@canopy/ui` vendored from `vendor/canopy-ui-0.1.4.tgz`
 - **Auth/DB**: Supabase shared with the rest of Canopy
+- **Storage**: Supabase Storage — `originals` bucket (shared with PhotoVault)
+- **Plane**: `lib/plane-client.ts` — `PLANE_API_KEY` + `PLANE_WORKSPACE_SLUG` env vars
 - **Deployment**: Vercel
 
-## Product Definition
-
-Canopy Create has two connected layers:
-
-1. **Client request layer**
-- clients submit structured requests using service templates
-- clients attach files, source docs, and notes
-- clients review proofs, request modifications, and approve final work
-
-2. **Production workflow layer**
-- internal team triages and accepts requests
-- requests become managed production jobs
-- jobs move through milestones, revisions, approvals, and delivery
-
-## Version 1 Focus
-
-V1 should support:
-- school clients
-- internal managers
-- designers
-- developers
-- reviewers
-
-V1 should not yet include:
-- bidding
-- public freelancer marketplace
-- payments / escrow
-- proposal competition
-
-## V1 Service Templates
-
-Initial curated service templates:
-- catalogs
-- brochures
-- postcards
-- booklets
-- yearbooks
-- factsheets
-- HTML email newsletters
-- social media templates
-- business cards
-- table throws
-- display booths
-- canopy
-- embroidery
-- brand refresh
-- logo design
-- annual report
-- presentation deck
-- full website redesign
-- landing page design
-- recruitment campaign materials
-- custom request
-
-These should remain curated by the product, not user-created arbitrarily in V1.
-
-## Recurring Production Support
-
-Canopy Create must support recurring service workflows, especially things like catalogs and annual reports where the workflow may begin with:
-- locating a prior-cycle artifact
-- exporting source text from the previous version
-- sending editable content back to the client
-- receiving updates
-- starting design/layout
-- managing proof and correction rounds
-
-This is a core product requirement, not an edge case.
-
-## Planned Domain Model
-
-Likely core tables / objects:
-- `create_requests`
-- `create_request_messages`
-- `create_request_files`
-- `create_projects`
-- `create_project_milestones`
-- `create_assignments`
-- `create_deliverables`
-- `create_deliverable_versions`
-- `create_approvals`
-- `create_activity_log`
-- `create_service_templates`
-- `create_workflow_templates`
-
-## Planned Roles
-
-Client roles:
-- `client_admin`
-- `client_staff`
-
-Internal roles:
-- `internal_manager`
-- `designer`
-- `developer`
-- `reviewer`
-
-Future:
-- `freelancer`
-
-The system should be designed so work can later be assigned to freelancers without reworking the request/project/approval model.
-
-## Portal Integration
-
-Create should launch from Portal using the standard Canopy handoff model:
-
-1. Portal creates a short-lived handoff row
-2. Product receives `?launch=<code>&workspace=<slug>`
-3. Product exchanges the code through `/api/auth/exchange-handoff`
-4. Product resolves workspace context from `/api/app-session`
-5. In-app switching routes through Portal handoff endpoints
-
-## PhotoVault Integration
-
-PhotoVault should remain the source of truth for reusable:
-- brand assets
-- approved photography
-- archived prior-cycle materials
-- logos and templates
-
-Create should link to those assets rather than re-owning them where possible.
-
-## Current Repo Structure
+## Repo Structure
 
 ```
 canopy-create/
   app/
     _components/
-      client-shell.tsx
-      product-shell.tsx
-      request-type-picker.tsx
-      milestone-checklist.tsx
+      client-shell.tsx          — sidebar nav shell (client component)
+      product-shell.tsx         — auth/session/workspace bootstrap shell
+      request-type-picker.tsx   — step 1 of new request flow
+      design-project-form.tsx
+      website-update-form.tsx
+      newsletter-brief-form.tsx
+      social-request-form.tsx
+      milestone-checklist.tsx   — project milestone list (canToggle prop)
+      item-status-select.tsx    — deliverable status dropdown
+      item-versions.tsx         — proof upload + approval actions (canUpload prop)
+      item-comments.tsx         — comments thread
+      request-attachments.tsx   — file attachment list + upload
     api/
-      app-session/
-      auth/exchange-handoff/
-      launcher-products/
+      app-session/              — workspace-scoped session endpoint
+      auth/exchange-handoff/    — Portal handoff exchange
+      launcher-products/        — product switcher data
+    items/
+      [itemId]/page.tsx         — deliverable detail (versions, approvals, comments)
+      actions.ts                — uploadVersionAction, submitApprovalAction, addCommentAction
     projects/
-      [projectId]/
-      actions.ts
+      [projectId]/page.tsx      — production sheet
+      actions.ts                — addMilestone, toggleMilestone, addItem, changeItemStatus, changeProjectStatus
+      page.tsx                  — projects list
     requests/
-      [requestId]/
-      new/
-      actions.ts
+      [requestId]/page.tsx      — request detail with brief, status, attachments
+      new/page.tsx              — new request flow
+      actions.ts                — submitCreateRequest, changeRequestStatus, convertRequestToProject, uploadAttachment, deleteAttachment
+      page.tsx                  — requests list
+    login/page.tsx
+    settings/page.tsx
     loading.tsx
     error.tsx
-    globals.css
     layout.tsx
-    page.tsx
-    settings/
+    page.tsx                    — dashboard
   docs/
-    PRD.md
-    progress.md
+    PRD.md                      — product definition and full roadmap
+    progress.md                 — build history (append new sessions at top)
   lib/
-    create-data.ts
-    create-request-types.ts
-    create-status.ts
-    create-types.ts
-    create-validators.ts
-    server-auth.ts
-    supabase-client.ts
-    workspace-client.ts
-    workspace-href.ts
+    create-data.ts              — all Supabase reads/writes (service client)
+    create-data-internal.ts     — (if needed) internal-only data helpers
+    create-request-types.ts     — RequestFamily, RequestType enums
+    create-roles.ts             — role model and permission gates
+    create-status.ts            — status enums (ProjectStatus, RequestStatus, ItemStatus, etc.)
+    create-types.ts             — TypeScript interfaces for all domain objects
+    create-validators.ts        — Zod validators for intake forms
+    plane-client.ts             — Plane API wrapper (createPlaneProject, createPlaneIssue, etc.)
+    server-auth.ts              — getServerActionAccess, getServerActionUser, requireWorkspaceAccess
+    supabase-client.ts          — browser Supabase client
+    supabase-server.ts          — createServerActionClient (cookie-based, for Server Actions)
+    workspace-client.ts         — workspace resolution helpers
+    workspace-href.ts           — href builder utilities
 ```
 
-## Current Implementation Notes
+## Domain Model
 
-- The product key is `create_canopy`
-- The repo now has product-specific tables and a working central data layer in `lib/create-data.ts`
-- Request creation, request detail, request conversion, project detail, project status, and milestone tracking are implemented
-- App Router loading and error boundaries are implemented
-- Portal handoff/session plumbing is in place inside this repo
-- Portal-side launch enablement in `canopy-platform` still needs to be completed before Create can be launched like Stories/Reach from the live Portal
+| Table | Purpose |
+|---|---|
+| `create_requests` | Client intake submissions |
+| `create_projects` | Production jobs (from converted requests) |
+| `create_milestones` | Ordered production steps per project |
+| `create_items` | Deliverables under a project |
+| `create_item_versions` | Proof file versions per deliverable |
+| `create_item_comments` | Comments thread per deliverable |
+| `create_approvals` | Client approval decisions per version |
+| `create_request_attachments` | Source docs and reference files on requests |
 
-## Current Domain Model
+**Plane bridge columns**: `plane_project_id` on `create_projects`, `plane_issue_id` on `create_items`.
 
-Implemented types and tables:
-- `create_requests`
-- `create_projects`
-- `create_items`
-- `create_milestones`
+**Storage paths**:
+- `create/{workspaceId}/requests/{requestId}/{timestamp}-{filename}` — request attachments
+- `create/{workspaceId}/items/{itemId}/versions/{timestamp}-{filename}` — proof versions
 
-Implemented request families:
-- `design_production`
-- `website_update`
-- `managed_communications`
+## Role Model
 
-Implemented request forms:
-- design project
-- website update
-- managed newsletter
-- social request
+Defined in `lib/create-roles.ts`.
 
-Implemented request details storage:
-- `create_requests.details` as JSON payload for specialized brief fields
+| Role | canManageProjects | canTriageRequests | canUpdateDeliverables | isInternalRole |
+|---|---|---|---|---|
+| `owner` | ✓ | ✓ | ✓ | ✓ |
+| `internal_manager` | ✓ | ✓ | ✓ | ✓ |
+| `designer` | | | ✓ | ✓ |
+| `developer` | | | ✓ | ✓ |
+| `reviewer` | | | | ✓ |
+| `client_admin` | | | | |
+| `client_staff` | | | | |
+| platform operator | ✓ | ✓ | ✓ | — |
+
+## Request Families and Types
+
+Defined in `lib/create-request-types.ts`.
+
+Request families: `design_production`, `website_update`, `managed_communications`
+
+Request types (mapped to form components):
+- `design_project` → `DesignProjectForm`
+- `website_update` → `WebsiteUpdateForm`
+- `newsletter_brief` → `NewsletterBriefForm`
+- `social_request` → `SocialRequestForm`
+
+All per-type brief fields are stored in `create_requests.details` (JSONB) — no migration needed for new fields within a type.
+
+## Auth Pattern
+
+**Server Actions**: use `getServerActionAccess(workspaceId)` — reads cookie session, returns `{ user, role, isPlatformOperator }`. Gate mutations with `canManageProjects`, `canTriageRequests`, `canUpdateDeliverables`.
+
+**Route handlers**: use `requireWorkspaceAccess(request, workspaceId)` from `lib/server-auth.ts`.
+
+**Service client**: use `createClient(url, serviceRoleKey)` directly in `lib/create-data.ts` for all data reads/writes — not the cookie client.
+
+## Plane Integration
+
+- `lib/plane-client.ts` wraps the Plane API (`https://api.plane.so/api/v1`)
+- Fire-and-log pattern — always wrap in try/catch, never throw to the user
+- `createPlaneProject(name, identifier, description)` — called on request → project conversion
+- `createPlaneIssue(planeProjectId, title)` — called on deliverable add
+- Plane workspace: `PLANE_WORKSPACE_SLUG` env var
+- API key: `PLANE_API_KEY` env var (rotate immediately if exposed)
+
+## Roadmap
+
+See `docs/PRD.md` for the full phase-by-phase plan. Summary:
+
+| Phase | Focus |
+|---|---|
+| 8 | Delivery — "mark as delivered", final files view for client |
+| 9 | Client-filtered view — role-aware request/project lists and dashboard |
+| 10 | Activity feed — project event log replacing email threads |
+| 11 | Recurring production — clone project for next cycle, PhotoVault link |
+| 12 | Assignee tracking — personal work queue, Plane sync |
+| 13 | Notifications — in-app bell + email for client events |
+| 14 | Portal launch integration — Create in the Portal product switcher |
+| 15 | Deployment — production Vercel, smoke test, monitoring |
 
 ## Rules
 
-- Keep Create tightly aligned to real service workflows, not generic PM abstractions
-- Treat requests, revisions, approvals, and delivery as first-class objects
-- Support recurring catalog/source-document workflows from the start
-- Keep all data scoped by `workspace_id`
-- Keep all Supabase reads/writes in `lib/create-data.ts`
-- Use `@canopy/ui` for interface work
-- Use `photovault` as the asset reference layer when reusable brand/media assets are involved
-- Run `npm run build` before considering changes complete
+- Keep Create tightly aligned to real service workflows — not generic PM abstractions
+- Requests, revisions, approvals, and delivery are first-class objects
+- Support recurring catalog/source-document workflows
+- All data operations scoped by `workspace_id`
+- All Supabase reads/writes live in `lib/create-data.ts`
+- Use `@canopy/ui` for interface work — no new component libraries
+- Use `lib/server-auth.ts` for all auth — do not re-implement
+- Plane sync is always fire-and-log — never block the user on Plane failure
+- Run `npx tsc --noEmit` before considering any change done
+- Do not move Create-specific workflows into `canopy-platform`
+
+## Validation
+
+```bash
+npx tsc --noEmit
+```
+
+No ESLint config is present in this repo yet.
+
+## Environment Variables
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3003
+NEXT_PUBLIC_PORTAL_URL=http://localhost:3000
+PLANE_API_KEY=
+PLANE_WORKSPACE_SLUG=
+```
