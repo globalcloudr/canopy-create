@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   BodyText,
   Button,
@@ -14,7 +15,7 @@ import {
   Textarea,
 } from "@canopy/ui";
 
-import { submitCreateRequestAction } from "@/app/requests/actions";
+import { submitCreateRequestAction, uploadAttachmentAction } from "@/app/requests/actions";
 import {
   socialRequestSchema,
   type SocialRequestInput,
@@ -49,17 +50,22 @@ export default function SocialRequestForm({
   workspaceId,
   family,
   requestType,
+  successRedirect,
 }: {
   workspaceId: string;
   family: RequestFamily;
   requestType: RequestType;
+  successRedirect: string;
 }) {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [targetPlatforms, setTargetPlatforms] = useState("");
   const [tone, setTone] = useState<SocialRequestInput["tone"]>(undefined);
   const [campaignGoals, setCampaignGoals] = useState("");
   const [callToAction, setCallToAction] = useState("");
   const [desiredPostDate, setDesiredPostDate] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<SocialRequestErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -99,9 +105,16 @@ export default function SocialRequestForm({
 
     startTransition(async () => {
       const result = await submitCreateRequestAction(workspaceId, parsed.data);
-      if (result.error) {
-        setFormError(result.error);
+      if (result.error || !result.requestId) {
+        setFormError(result.error ?? "Something went wrong. Please try again.");
+        return;
       }
+      for (const file of selectedFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        await uploadAttachmentAction(workspaceId, result.requestId, fd);
+      }
+      router.push(successRedirect);
     });
   }
 
@@ -200,6 +213,41 @@ export default function SocialRequestForm({
               onChange={(e) => setDesiredPostDate(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Reference Files <span className="text-[var(--text-muted)] font-normal">(optional)</span></Label>
+          <BodyText muted className="text-xs">Attach logos, existing materials, or examples to help us get started.</BodyText>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-[var(--border)] px-4 py-2.5 text-[13px] text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition"
+          >
+            + Attach files
+          </button>
+          {selectedFiles.length > 0 && (
+            <ul className="mt-1 space-y-1">
+              {selectedFiles.map((f, i) => (
+                <li key={i} className="flex items-center gap-2 text-[13px] text-[var(--foreground)]">
+                  <span className="truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    className="text-[var(--text-muted)] hover:text-red-500"
+                    onClick={() => setSelectedFiles((prev) => prev.filter((_, j) => j !== i))}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {formError ? (

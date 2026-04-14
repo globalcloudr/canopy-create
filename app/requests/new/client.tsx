@@ -27,6 +27,12 @@ export default function NewRequestClient({
       : `/requests?workspace=${encodeURIComponent(workspaceId)}`
     : "/";
 
+  const successRedirect = workspaceId
+    ? isSchoolUser
+      ? `/?workspace=${encodeURIComponent(workspaceId)}`
+      : `/requests?workspace=${encodeURIComponent(workspaceId)}`
+    : "/";
+
   const selectedForm = useMemo(() => {
     if (!selection) return null;
 
@@ -36,6 +42,7 @@ export default function NewRequestClient({
           workspaceId={workspaceId}
           family={selection.family}
           requestType={selection.requestType}
+          successRedirect={successRedirect}
         />
       );
     }
@@ -45,6 +52,7 @@ export default function NewRequestClient({
           workspaceId={workspaceId}
           family={selection.family}
           requestType={selection.requestType}
+          successRedirect={successRedirect}
         />
       );
     }
@@ -54,6 +62,7 @@ export default function NewRequestClient({
           workspaceId={workspaceId}
           family={selection.family}
           requestType={selection.requestType}
+          successRedirect={successRedirect}
         />
       );
     }
@@ -62,9 +71,10 @@ export default function NewRequestClient({
         workspaceId={workspaceId}
         family={selection.family}
         requestType={selection.requestType}
+        successRedirect={successRedirect}
       />
     );
-  }, [selection, workspaceId]);
+  }, [selection, workspaceId, successRedirect]);
 
   const Shell = isSchoolUser ? SchoolShell : ClientShell;
   const activeNav = isSchoolUser ? "home" : "requests";

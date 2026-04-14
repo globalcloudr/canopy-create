@@ -19,11 +19,12 @@ import {
   type CreateRequestSubmissionInput,
 } from "@/lib/create-validators";
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
-import { canManageProjects, canTriageRequests, isClientRole } from "@/lib/create-roles";
+import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
 import { createPlaneProject } from "@/lib/plane-client";
 
 export type CreateRequestActionState = {
   error: string | null;
+  requestId: string | null;
 };
 
 function buildRequestDetails(input: CreateRequestSubmissionInput) {
@@ -67,25 +68,21 @@ export async function submitCreateRequestAction(
   payload: CreateRequestSubmissionInput
 ): Promise<CreateRequestActionState> {
   if (!workspaceId) {
-    return { error: "Workspace is required." };
+    return { error: "Workspace is required.", requestId: null };
   }
 
   const parsed = createRequestSubmissionSchema.safeParse(payload);
   if (!parsed.success) {
     return {
-      error:
-        parsed.error.issues[0]?.message ?? "Please correct the highlighted fields.",
+      error: parsed.error.issues[0]?.message ?? "Please correct the highlighted fields.",
+      requestId: null,
     };
   }
 
   const input = parsed.data;
-  const [user, { role, isPlatformOperator }] = await Promise.all([
-    getServerActionUser(),
-    getServerActionAccess(workspaceId),
-  ]);
-  const schoolUser = isClientRole(role) && !isPlatformOperator;
+  const user = await getServerActionUser();
 
-  await createRequest(workspaceId, {
+  const request = await createRequest(workspaceId, {
     title: input.title,
     workflow_family: input.workflowFamily,
     request_type: input.requestType,
@@ -98,10 +95,7 @@ export async function submitCreateRequestAction(
     converted_item_id: null,
   });
 
-  if (schoolUser) {
-    redirect(`/?workspace=${encodeURIComponent(workspaceId)}`);
-  }
-  redirect(`/requests?workspace=${encodeURIComponent(workspaceId)}`);
+  return { error: null, requestId: request.id };
 }
 
 export async function changeRequestStatus(

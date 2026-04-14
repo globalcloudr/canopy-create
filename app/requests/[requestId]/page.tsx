@@ -5,14 +5,11 @@ import { AppSurface, Badge, BodyText, Button } from "@canopy/ui";
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";
 import RequestAttachments from "@/app/_components/request-attachments";
-import {
-  changeRequestStatus,
-  convertRequestToProject,
-} from "@/app/requests/actions";
+import { convertRequestToProject } from "@/app/requests/actions";
 import { getRequest, listRequestAttachments } from "@/lib/create-data";
-import type { RequestStatus } from "@/lib/create-status";
 import { getServerActionAccess } from "@/lib/server-auth";
-import { canManageProjects, canTriageRequests, isClientRole } from "@/lib/create-roles";
+import { canManageProjects, isClientRole } from "@/lib/create-roles";
+
 
 type RequestDetailPageProps = {
   params: Promise<{ requestId: string }>;
@@ -104,12 +101,6 @@ function BriefField({
   );
 }
 
-const REQUEST_STATUS_FLOW: { value: RequestStatus; label: string }[] = [
-  { value: "submitted",     label: "Submitted" },
-  { value: "in_progress",   label: "In Progress" },
-  { value: "client_review", label: "Client Review" },
-  { value: "completed",     label: "Completed" },
-];
 
 export default async function RequestDetailPage({
   params,
@@ -149,7 +140,6 @@ export default async function RequestDetailPage({
   ]);
 
   const canManage = canManageProjects(role, isPlatformOperator);
-  const canTriage = canTriageRequests(role, isPlatformOperator);
   const schoolUser = isClientRole(role) && !isPlatformOperator;
 
   // Generate short-lived signed URLs for each attachment
@@ -319,39 +309,6 @@ export default async function RequestDetailPage({
 
           {/* Sidebar */}
           <div className="space-y-5">
-
-            {/* Status controls — internal team only, hidden once converted */}
-            {!isConverted && canTriage && (
-              <AppSurface className="px-6 py-6 sm:px-8">
-                <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                  Status
-                </p>
-                <div className="mt-3 flex flex-col gap-1.5">
-                  {REQUEST_STATUS_FLOW.map(({ value, label }) => {
-                    const action = changeRequestStatus.bind(
-                      null,
-                      workspaceId,
-                      request.id,
-                      value
-                    );
-                    return (
-                      <form key={value} action={action}>
-                        <button
-                          type="submit"
-                          className={`w-full rounded-2xl px-4 py-2.5 text-left text-[14px] font-medium transition ${
-                            request.status === value
-                              ? "bg-[var(--primary)] text-white"
-                              : "text-[var(--foreground)] hover:bg-[var(--border)]"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      </form>
-                    );
-                  })}
-                </div>
-              </AppSurface>
-            )}
 
             {/* Details */}
             <AppSurface className="px-6 py-6 sm:px-8">
