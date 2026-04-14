@@ -336,6 +336,46 @@ export async function listMilestones(
   return (data ?? []) as Milestone[];
 }
 
+/** Load milestones for multiple projects in a single query */
+export async function listMilestonesForProjects(
+  workspaceId: string,
+  projectIds: string[]
+): Promise<Milestone[]> {
+  if (projectIds.length === 0) return [];
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_milestones")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .in("project_id", projectIds)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Milestone[];
+}
+
+/** Load all items for a workspace, optionally filtered by project IDs */
+export async function listItemsForProjects(
+  workspaceId: string,
+  projectIds: string[]
+): Promise<CreateItem[]> {
+  if (projectIds.length === 0) return [];
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_items")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .in("project_id", projectIds)
+    .order("sort_order", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateItem[];
+}
+
 export async function createMilestone(
   workspaceId: string,
   projectId: string,
