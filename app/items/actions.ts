@@ -7,9 +7,11 @@ import {
   addItemComment,
   createItemVersion,
   submitApproval,
+  updateItem,
 } from "@/lib/create-data";
 import type { ApprovalDecision } from "@/lib/create-status";
-import { getServerActionUser } from "@/lib/server-auth";
+import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
+import { isInternalRole } from "@/lib/create-roles";
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -104,4 +106,28 @@ export async function submitApprovalAction(
   });
 
   revalidatePath(`/items/${itemId}`, "page");
+}
+
+export async function markDeliveredAction(
+  workspaceId: string,
+  itemId: string,
+  projectId: string,
+  finalVersionId: string | null
+): Promise<{ error?: string }> {
+  if (!workspaceId || !itemId) return { error: "Missing context." };
+
+  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  if (!isInternalRole(role) && !isPlatformOperator) {
+    return { error: "Only internal team members can mark a deliverable as delivered." };
+  }
+
+  await updateItem(workspaceId, itemId, {
+    delivered_at: new Date().toISOString(),
+    final_version_id: finalVersionId,
+    status: "completed",
+  });
+
+  revalidatePath(`/items/${itemId}`, "page");
+  revalidatePath(`/projects/${projectId}`, "page");
+  return {};
 }

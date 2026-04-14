@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { uploadVersionAction, submitApprovalAction } from "@/app/items/actions";
+import { uploadVersionAction, submitApprovalAction, markDeliveredAction } from "@/app/items/actions";
 import type { ApprovalDecision } from "@/lib/create-status";
 
 type Version = {
@@ -32,6 +32,7 @@ type Props = {
   approvals: Approval[];
   latestVersionId: string | null;
   canUpload: boolean;
+  deliveredAt: string | null;
 };
 
 const DECISION_LABELS: Record<ApprovalDecision, string> = {
@@ -62,6 +63,7 @@ export default function ItemVersions({
   approvals,
   latestVersionId,
   canUpload,
+  deliveredAt,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +73,23 @@ export default function ItemVersions({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [approvalNote, setApprovalNote] = useState("");
   const [submittingDecision, setSubmittingDecision] = useState<ApprovalDecision | null>(null);
+  const [delivering, setDelivering] = useState(false);
+  const [deliverError, setDeliverError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const isDelivered = !!deliveredAt;
+
+  async function handleMarkDelivered() {
+    setDeliverError(null);
+    setDelivering(true);
+    const result = await markDeliveredAction(workspaceId, itemId, projectId, latestVersionId);
+    setDelivering(false);
+    if (result.error) {
+      setDeliverError(result.error);
+    } else {
+      startTransition(() => router.refresh());
+    }
+  }
 
   async function handleUpload(formData: FormData) {
     setUploadError(null);
@@ -233,8 +251,8 @@ export default function ItemVersions({
         )}
       </div>
 
-      {/* Approval action */}
-      {versions.length > 0 && (
+      {/* Approval action — hidden once delivered */}
+      {versions.length > 0 && !isDelivered && (
         <div>
           <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
             Submit review
@@ -269,6 +287,50 @@ export default function ItemVersions({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Delivery — internal team only */}
+      {canUpload && versions.length > 0 && (
+        <div className={`rounded-xl border p-4 ${isDelivered ? "border-emerald-200 bg-emerald-50" : "border-[var(--border)]"}`}>
+          {isDelivered ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-emerald-700">Delivered</span>
+              <span className="text-[12px] text-emerald-600">{formatDate(deliveredAt!)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[13px] font-medium text-[var(--foreground)]">Ready to deliver?</p>
+                <p className="text-[12px] text-[var(--text-muted)]">
+                  Marks this deliverable as complete and makes the final file available to the client.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleMarkDelivered}
+                disabled={delivering || isPending}
+                className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition"
+              >
+                {delivering ? "Delivering…" : "Mark as Delivered"}
+              </button>
+            </div>
+          )}
+          {deliverError && (
+            <p className="mt-2 text-[12px] text-red-600">{deliverError}</p>
+          )}
+        </div>
+      )}
+
+      {/* Delivered banner for clients (canUpload = false) */}
+      {!canUpload && isDelivered && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <p className="text-[13px] font-semibold text-emerald-700">
+            Delivered {formatDate(deliveredAt!)}
+          </p>
+          <p className="mt-0.5 text-[12px] text-emerald-600">
+            Download your final file from the version above.
+          </p>
         </div>
       )}
     </div>

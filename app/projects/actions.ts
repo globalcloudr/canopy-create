@@ -110,6 +110,8 @@ export async function addItemAction(
     due_date: null,
     assignee_id: null,
     plane_issue_id: null,
+    delivered_at: null,
+    final_version_id: null,
     sort_order: sortOrder,
   });
 

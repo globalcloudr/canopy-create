@@ -212,6 +212,7 @@ export default async function ItemDetailPage({
               approvals={approvals}
               latestVersionId={latestVersionId}
               canUpload={canUploadVersion}
+              deliveredAt={item.delivered_at}
             />
           </AppSurface>
 

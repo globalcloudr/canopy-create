@@ -299,7 +299,7 @@ export async function createItem(
 export async function updateItem(
   workspaceId: string,
   itemId: string,
-  payload: Partial<Pick<CreateItem, "title" | "status" | "sort_order" | "plane_issue_id">>
+  payload: Partial<Pick<CreateItem, "title" | "status" | "sort_order" | "plane_issue_id" | "delivered_at" | "final_version_id" | "approval_state">>
 ): Promise<CreateItem> {
   const client = getServiceClient();
   const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);

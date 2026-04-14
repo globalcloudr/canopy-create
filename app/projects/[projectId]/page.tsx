@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 import { AppSurface, Badge, BodyText, Button, Input } from "@canopy/ui";
 
 import ClientShell from "@/app/_components/client-shell";
@@ -78,6 +79,33 @@ export default async function ProjectDetailPage({
 
   const canManage = canManageProjects(role, isPlatformOperator);
   const canUpdateStatus = canUpdateDeliverables(role, isPlatformOperator);
+
+  // Build delivered files list for client view
+  const deliveredItems = items.filter((item) => !!item.delivered_at);
+  const serviceClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const deliveredFiles = await Promise.all(
+    deliveredItems.map(async (item) => {
+      if (!item.final_version_id) return { item, signedUrl: null, filename: null };
+      const { data: version } = await serviceClient
+        .from("create_item_versions")
+        .select("file_url, version_label")
+        .eq("id", item.final_version_id)
+        .maybeSingle();
+      if (!version?.file_url) return { item, signedUrl: null, filename: null };
+      const { data } = await serviceClient.storage
+        .from("originals")
+        .createSignedUrl(version.file_url, 3600);
+      return {
+        item,
+        signedUrl: data?.signedUrl ?? null,
+        filename: version.file_url.split("/").pop() ?? null,
+        versionLabel: version.version_label,
+      };
+    })
+  );
 
   const originRequestHref = project.origin_request_id
     ? `/requests/${project.origin_request_id}?workspace=${encodeURIComponent(workspaceId)}`
@@ -207,7 +235,11 @@ export default async function ProjectDetailPage({
                   >
                     {item.title}
                   </Link>
-                  {canUpdateStatus ? (
+                  {item.delivered_at ? (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                      Delivered
+                    </span>
+                  ) : canUpdateStatus ? (
                     <ItemStatusSelect
                       workspaceId={workspaceId}
                       projectId={project.id}
@@ -232,6 +264,52 @@ export default async function ProjectDetailPage({
             </form>
           )}
         </AppSurface>
+
+        {/* Delivered Files — shown when at least one deliverable is delivered */}
+        {deliveredFiles.length > 0 && (
+          <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              Delivered Files
+            </p>
+            <BodyText muted className="mt-0.5">
+              Final files ready for download.
+            </BodyText>
+            <div className="mt-4 divide-y divide-[var(--border)]">
+              {deliveredFiles.map(({ item, signedUrl, versionLabel }) => (
+                <div key={item.id} className="flex items-center justify-between gap-4 py-3.5">
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</p>
+                    {versionLabel && (
+                      <p className="text-[12px] text-[var(--text-muted)]">{versionLabel}</p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                      Delivered
+                    </span>
+                    {signedUrl ? (
+                      <a
+                        href={signedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
+                        className="text-[12px] text-[var(--primary)] hover:underline"
+                      >
+                        View
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </AppSurface>
+        )}
 
       </div>
     </ClientShell>

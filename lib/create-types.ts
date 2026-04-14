@@ -50,6 +50,8 @@ export interface CreateItem {
   sort_order: number;
   assignee_id: string | null;
   plane_issue_id: string | null;
+  delivered_at: string | null;
+  final_version_id: string | null;
   created_at: string;
   updated_at: string;
 }
