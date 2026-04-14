@@ -37,15 +37,50 @@ function requireSingleRow<T>(data: T | null, error: { message: string } | null) 
   return data;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function resolveWorkspaceId(
+  client: ReturnType<typeof getServiceClient>,
+  workspaceRef: string
+) {
+  const normalized = workspaceRef.trim();
+
+  if (!normalized) {
+    throw new Error("Workspace is required.");
+  }
+
+  if (UUID_PATTERN.test(normalized)) {
+    return normalized;
+  }
+
+  const { data, error } = await client
+    .from("organizations")
+    .select("id")
+    .eq("slug", normalized)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.id) {
+    throw new Error("Workspace not found.");
+  }
+
+  return data.id as string;
+}
+
 export async function listRequests(
   workspaceId: string,
   status?: CreateRequest["status"] | CreateRequest["status"][]
 ): Promise<CreateRequest[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
   let query = client
     .from("create_requests")
     .select("*")
-    .eq("workspace_id", workspaceId);
+    .eq("workspace_id", resolvedWorkspaceId);
 
   if (Array.isArray(status) && status.length > 0) {
     query = query.in("status", status);
@@ -67,11 +102,12 @@ export async function getRequest(
   requestId: string
 ): Promise<CreateRequest> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_requests")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", requestId)
     .maybeSingle();
 
@@ -86,15 +122,16 @@ export async function createRequest(
   >
 ): Promise<CreateRequest> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_requests")
     .insert({
-      workspace_id: workspaceId,
+      workspace_id: resolvedWorkspaceId,
       ...payload,
     })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateRequest | null, error);
@@ -106,6 +143,7 @@ export async function updateRequest(
   payload: Partial<CreateRequest>
 ): Promise<CreateRequest> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
   const {
     id: _id,
     workspace_id: _workspaceId,
@@ -117,7 +155,7 @@ export async function updateRequest(
   const { data, error } = await client
     .from("create_requests")
     .update(updatePayload)
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", requestId)
     .select("*")
     .maybeSingle();
@@ -130,10 +168,11 @@ export async function listProjects(
   status?: CreateProject["status"] | CreateProject["status"][]
 ): Promise<CreateProject[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
   let query = client
     .from("create_projects")
     .select("*")
-    .eq("workspace_id", workspaceId);
+    .eq("workspace_id", resolvedWorkspaceId);
 
   if (Array.isArray(status) && status.length > 0) {
     query = query.in("status", status);
@@ -155,11 +194,12 @@ export async function getProject(
   projectId: string
 ): Promise<CreateProject> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_projects")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", projectId)
     .maybeSingle();
 
@@ -174,15 +214,16 @@ export async function createProject(
   >
 ): Promise<CreateProject> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_projects")
     .insert({
-      workspace_id: workspaceId,
+      workspace_id: resolvedWorkspaceId,
       ...payload,
     })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateProject | null, error);
@@ -194,6 +235,7 @@ export async function updateProject(
   payload: Partial<CreateProject>
 ): Promise<CreateProject> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
   const {
     id: _id,
     workspace_id: _workspaceId,
@@ -205,7 +247,7 @@ export async function updateProject(
   const { data, error } = await client
     .from("create_projects")
     .update(updatePayload)
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", projectId)
     .select("*")
     .maybeSingle();
@@ -218,11 +260,12 @@ export async function listProjectItems(
   projectId: string
 ): Promise<CreateItem[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_items")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("project_id", projectId)
     .order("sort_order", { ascending: true });
 
@@ -238,15 +281,16 @@ export async function createItem(
   payload: Omit<CreateItem, "id" | "workspace_id" | "created_at" | "updated_at">
 ): Promise<CreateItem> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_items")
     .insert({
-      workspace_id: workspaceId,
+      workspace_id: resolvedWorkspaceId,
       ...payload,
     })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateItem | null, error);
@@ -258,11 +302,12 @@ export async function updateItem(
   payload: Partial<Pick<CreateItem, "title" | "status" | "sort_order" | "plane_issue_id">>
 ): Promise<CreateItem> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_items")
     .update(payload)
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", itemId)
     .select("*")
     .maybeSingle();
@@ -275,11 +320,12 @@ export async function listMilestones(
   projectId: string
 ): Promise<Milestone[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_milestones")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("project_id", projectId)
     .order("created_at", { ascending: true });
 
@@ -296,17 +342,18 @@ export async function createMilestone(
   title: string
 ): Promise<Milestone> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_milestones")
     .insert({
-      workspace_id: workspaceId,
+      workspace_id: resolvedWorkspaceId,
       project_id: projectId,
       title,
       status: "pending",
     })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as Milestone | null, error);
@@ -318,11 +365,12 @@ export async function updateMilestone(
   status: string
 ): Promise<Milestone> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_milestones")
     .update({ status })
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", milestoneId)
     .select("*")
     .maybeSingle();
@@ -337,11 +385,12 @@ export async function listItemVersions(
   itemId: string
 ): Promise<CreateItemVersion[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_item_versions")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("item_id", itemId)
     .order("created_at", { ascending: true });
 
@@ -354,12 +403,13 @@ export async function createItemVersion(
   payload: Omit<CreateItemVersion, "id" | "workspace_id" | "created_at">
 ): Promise<CreateItemVersion> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_item_versions")
-    .insert({ workspace_id: workspaceId, ...payload })
+    .insert({ workspace_id: resolvedWorkspaceId, ...payload })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateItemVersion | null, error);
@@ -372,11 +422,12 @@ export async function listItemComments(
   itemId: string
 ): Promise<CreateItemComment[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_item_comments")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("item_id", itemId)
     .order("created_at", { ascending: true });
 
@@ -389,12 +440,13 @@ export async function addItemComment(
   payload: Omit<CreateItemComment, "id" | "workspace_id" | "created_at">
 ): Promise<CreateItemComment> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_item_comments")
-    .insert({ workspace_id: workspaceId, ...payload })
+    .insert({ workspace_id: resolvedWorkspaceId, ...payload })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateItemComment | null, error);
@@ -407,11 +459,12 @@ export async function listApprovals(
   itemId: string
 ): Promise<CreateApproval[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_approvals")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("item_id", itemId)
     .order("decided_at", { ascending: false });
 
@@ -430,12 +483,13 @@ export async function submitApproval(
   }
 ): Promise<CreateApproval> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_approvals")
-    .insert({ workspace_id: workspaceId, ...payload })
+    .insert({ workspace_id: resolvedWorkspaceId, ...payload })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateApproval | null, error);
@@ -448,11 +502,12 @@ export async function listRequestAttachments(
   requestId: string
 ): Promise<CreateRequestAttachment[]> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_request_attachments")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .eq("request_id", requestId)
     .order("created_at", { ascending: true });
 
@@ -465,12 +520,13 @@ export async function addRequestAttachment(
   payload: Omit<CreateRequestAttachment, "id" | "workspace_id" | "created_at">
 ): Promise<CreateRequestAttachment> {
   const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
   const { data, error } = await client
     .from("create_request_attachments")
-    .insert({ workspace_id: workspaceId, ...payload })
+    .insert({ workspace_id: resolvedWorkspaceId, ...payload })
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", resolvedWorkspaceId)
     .single();
 
   return requireSingleRow(data as CreateRequestAttachment | null, error);

@@ -52,7 +52,11 @@ const PORTAL_URL = process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://usecanopy.scho
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type OrgOption = { id: string; name: string; slug: string | null };
-type LauncherProductKey = "photovault" | "stories_canopy" | "reach_canopy";
+type LauncherProductKey =
+  | "photovault"
+  | "stories_canopy"
+  | "reach_canopy"
+  | "create_canopy";
 
 type AppSessionPayload = {
   user: { id: string; email: string; displayName: string };
@@ -190,7 +194,10 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
         const payload = (await response.json()) as { products?: LauncherProductKey[] };
         setLauncherProductKeys(
           (payload.products ?? []).filter((v): v is LauncherProductKey =>
-            v === "photovault" || v === "stories_canopy" || v === "reach_canopy"
+            v === "photovault" ||
+            v === "stories_canopy" ||
+            v === "reach_canopy" ||
+            v === "create_canopy"
           )
         );
       } catch {
@@ -347,7 +354,7 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
     form.submit();
   }
 
-  async function launchProduct(productKey: Exclude<LauncherProductKey, never>) {
+  async function launchProduct(productKey: Exclude<LauncherProductKey, "create_canopy">) {
     if (launchingProductKey) return;
     setLaunchingProductKey(productKey);
     try {
@@ -370,7 +377,6 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
   // ── Switcher items ────────────────────────────────────────────────────────
 
   const launcherItems = [
-    { key: "portal", label: "Canopy Portal", portal: true as const },
     ...(launcherProductKeys.includes("photovault")
       ? [{ key: "photovault", label: "PhotoVault", productKey: "photovault" as const }]
       : []),
@@ -380,6 +386,10 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
     ...(launcherProductKeys.includes("reach_canopy")
       ? [{ key: "reach_canopy", label: "Canopy Reach", productKey: "reach_canopy" as const }]
       : []),
+    ...(launcherProductKeys.includes("create_canopy")
+      ? [{ key: "create_canopy", label: "Canopy Create", href: "/", current: true as const }]
+      : []),
+    { key: "portal", label: "Canopy Portal", portal: true as const },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -472,6 +482,13 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
                           {launchingProductKey === item.productKey && (
                             <span className="ml-auto text-[11px] text-[var(--text-muted)]">opening…</span>
                           )}
+                        </DropdownMenuItem>
+                      ) : "current" in item ? (
+                        <DropdownMenuItem key={item.key} asChild>
+                          <Link href={item.href!}>
+                            {item.label}
+                            <span className="ml-auto text-[11px] text-[var(--text-muted)]">current</span>
+                          </Link>
                         </DropdownMenuItem>
                       ) : null
                     )}
