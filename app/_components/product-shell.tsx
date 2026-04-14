@@ -518,11 +518,7 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
                     return (
                       <Link
                         key={item.key}
-                        href={
-                          isPlatformOperator
-                            ? buildWorkspaceHref(item.href, activeOrg?.id)
-                            : item.href
-                        }
+                        href={buildWorkspaceHref(item.href, activeOrg?.id)}
                         className={navClass(activeNav === item.key)}
                       >
                         <Icon className="h-[18px] w-[18px]" />

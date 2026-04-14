@@ -9,6 +9,7 @@ import ItemStatusSelect from "@/app/_components/item-status-select";
 import ActivityFeed from "@/app/_components/activity-feed";
 import {
   getProject,
+  getRequest,
   listMilestones,
   listProjectItems,
   listProjectActivity,
@@ -81,6 +82,16 @@ export default async function ProjectDetailPage({
     listProjectActivity(workspaceId, projectId),
   ]);
 
+  // Fetch origin request brief for school user view (best effort)
+  let originRequest: Awaited<ReturnType<typeof getRequest>> | null = null;
+  if (project.origin_request_id) {
+    try {
+      originRequest = await getRequest(workspaceId, project.origin_request_id);
+    } catch {
+      // not critical
+    }
+  }
+
   const canManage = canManageProjects(role, isPlatformOperator);
   const canUpdateStatus = canUpdateDeliverables(role, isPlatformOperator);
 
@@ -148,9 +159,26 @@ export default async function ProjectDetailPage({
       completed: "Complete",
     };
 
+    const STAGE_MESSAGE: Record<string, string> = {
+      received: "We've received your job and are reviewing your brief. We'll update this page once production begins.",
+      production: "We're working on your job now. We'll let you know when your proof is ready to review.",
+      review: "Your proof is ready — please review and let us know what you think.",
+      delivered: "Your files are ready to download below.",
+    };
+
+    // Brief fields from the origin request
+    const briefDetails = (originRequest?.details ?? {}) as Record<string, string | null>;
+    const briefEntries = Object.entries(briefDetails).filter(
+      ([, v]) => typeof v === "string" && v.trim() !== ""
+    ) as [string, string][];
+
+    function briefLabel(key: string) {
+      return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5">
+        <div className="space-y-5 max-w-2xl">
 
           {/* Header */}
           <div>
@@ -162,6 +190,9 @@ export default async function ProjectDetailPage({
             </Link>
             <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {project.title}
+            </p>
+            <p className="mt-1 text-[14px] text-[var(--text-muted)]">
+              {STAGE_MESSAGE[stage]}
             </p>
           </div>
 
@@ -280,6 +311,27 @@ export default async function ProjectDetailPage({
                 Everything has been delivered. Download your files above.
               </p>
             </div>
+          )}
+
+          {/* What you submitted */}
+          {briefEntries.length > 0 && (
+            <AppSurface className="px-6 py-6 sm:px-8">
+              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
+                What you submitted
+              </p>
+              <dl className="divide-y divide-[var(--border)]">
+                {briefEntries.map(([key, value]) => (
+                  <div key={key} className="py-3.5">
+                    <dt className="text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                      {briefLabel(key)}
+                    </dt>
+                    <dd className="mt-1 text-[14px] leading-6 text-[var(--foreground)] whitespace-pre-wrap">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </AppSurface>
           )}
 
         </div>
