@@ -138,22 +138,34 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       return "received";
     }
 
-    const STAGE_LABEL: Record<string, string> = {
-      received: "We're reviewing your request",
+    // Unified status label + color for both request and project cards
+    const STATUS_LABEL: Record<string, string> = {
+      // request statuses
+      submitted: "Received",
+      in_progress: "In production",
+      client_review: "Your input is needed",
+      // project stages
+      received: "Received",
       production: "In production",
-      review: "Your proof is ready",
+      review: "Proof ready for review",
       delivered: "Delivered",
     };
-    const STAGE_COLOR: Record<string, string> = {
+    const STATUS_COLOR: Record<string, string> = {
+      submitted: "text-[var(--text-muted)]",
+      in_progress: "text-blue-600",
+      client_review: "text-amber-600",
       received: "text-[var(--text-muted)]",
       production: "text-blue-600",
       review: "text-amber-600",
       delivered: "text-emerald-600",
     };
-    const REQUEST_STATUS_LABEL: Record<string, string> = {
-      submitted: "Received — we'll be in touch",
-      in_progress: "We're reviewing your request",
-      client_review: "Your input is needed",
+
+    // STAGE_LABEL still used in project detail page (not here) — keep for compatibility
+    const STAGE_COLOR: Record<string, string> = {
+      received: "text-[var(--text-muted)]",
+      production: "text-blue-600",
+      review: "text-amber-600",
+      delivered: "text-emerald-600",
     };
 
     // Unified job list: pending requests + active projects, newest first
@@ -249,68 +261,76 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
             {/* Job list */}
             {jobs.length > 0 && (
-              <AppSurface className="px-6 py-6 sm:px-8">
-                <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                  Your Jobs
-                </p>
-                <div className="mt-4 space-y-3">
-                  {jobs.map((job) => {
-                    if (job.kind === "request") {
-                      const label = REQUEST_STATUS_LABEL[job.request.status] ?? job.request.status;
-                      return (
-                        <Link
-                          key={job.request.id}
-                          href={`/requests/${job.request.id}?workspace=${encodeURIComponent(workspaceId)}`}
-                          className="group flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                              {job.request.title}
-                            </p>
-                            <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">{label}</p>
-                          </div>
-                          <span className="shrink-0 text-[var(--text-muted)]">→</span>
-                        </Link>
-                      );
-                    }
-
-                    const stage = projectStage(job.items);
-                    const completed = job.milestones.filter((m) => m.status === "completed").length;
-                    const total = job.milestones.length;
-                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-
+              <div className="space-y-2">
+                {jobs.map((job) => {
+                  if (job.kind === "request") {
+                    const statusKey = job.request.status;
+                    const label = STATUS_LABEL[statusKey] ?? formatLabel(statusKey);
+                    const color = STATUS_COLOR[statusKey] ?? "text-[var(--text-muted)]";
+                    const typeLabel = formatLabel(job.request.request_type);
+                    const date = formatDate(job.request.created_at);
                     return (
                       <Link
-                        key={job.project.id}
-                        href={`/projects/${job.project.id}?workspace=${encodeURIComponent(workspaceId)}`}
-                        className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
+                        key={job.request.id}
+                        href={`/requests/${job.request.id}?workspace=${encodeURIComponent(workspaceId)}`}
+                        className="group flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
                       >
-                        <div className="flex items-center justify-between gap-4">
-                          <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                            {job.project.title}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                            {job.request.title}
                           </p>
-                          <span className={`shrink-0 text-[12px] font-medium ${STAGE_COLOR[stage]}`}>
-                            {STAGE_LABEL[stage]}
-                          </span>
+                          <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
+                            {typeLabel} · Submitted {date}
+                          </p>
                         </div>
-                        {total > 0 && (
-                          <div className="mt-3">
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
-                              <div
-                                className="h-full rounded-full bg-[var(--primary)] transition-all"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                              {completed} of {total} steps complete
-                            </p>
-                          </div>
-                        )}
+                        <span className={`shrink-0 text-[12px] font-medium ${color}`}>{label}</span>
                       </Link>
                     );
-                  })}
-                </div>
-              </AppSurface>
+                  }
+
+                  const stage = projectStage(job.items);
+                  const label = STATUS_LABEL[stage] ?? formatLabel(stage);
+                  const color = STAGE_COLOR[stage] ?? "text-[var(--text-muted)]";
+                  const completed = job.milestones.filter((m) => m.status === "completed").length;
+                  const total = job.milestones.length;
+                  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                  const typeLabel = formatLabel(job.project.workflow_family);
+                  const date = formatDate(job.project.created_at);
+
+                  return (
+                    <Link
+                      key={job.project.id}
+                      href={`/projects/${job.project.id}?workspace=${encodeURIComponent(workspaceId)}`}
+                      className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                            {job.project.title}
+                          </p>
+                          <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
+                            {typeLabel} · Started {date}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 text-[12px] font-medium ${color}`}>{label}</span>
+                      </div>
+                      {total > 0 && (
+                        <div className="mt-3">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
+                            <div
+                              className="h-full rounded-full bg-[var(--primary)] transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                            {completed} of {total} steps complete
+                          </p>
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             )}
 
             {/* Delivered files */}
