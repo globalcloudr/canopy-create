@@ -108,21 +108,33 @@ export default function ClientProofReview({
     return (
       <div className="space-y-4">
         {latestVersion.signedUrl && (
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-            <div>
-              <p className="text-[14px] font-medium text-[var(--foreground)]">
-                {latestVersion.versionLabel}
-              </p>
-              <p className="text-[12px] text-[var(--text-muted)]">Uploaded {formatDate(latestVersion.createdAt)}</p>
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-medium text-[var(--foreground)]">
+                  {latestVersion.versionLabel}
+                </p>
+                <p className="text-[12px] text-[var(--text-muted)]">Uploaded {formatDate(latestVersion.createdAt)}</p>
+              </div>
+              <a
+                href={latestVersion.signedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
+              >
+                View proof
+              </a>
             </div>
-            <a
-              href={latestVersion.signedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
-            >
-              View proof
-            </a>
+            {latestVersion.notes && (
+              <div className="border-t border-[var(--border)] pt-3">
+                <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">
+                  What changed
+                </p>
+                <p className="text-[14px] leading-6 text-[var(--foreground)] whitespace-pre-wrap">
+                  {latestVersion.notes}
+                </p>
+              </div>
+            )}
           </div>
         )}
         <div className={`rounded-2xl border px-5 py-4 ${isApproved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
@@ -156,21 +168,33 @@ export default function ClientProofReview({
     <div className="space-y-4">
       {/* Proof download */}
       {latestVersion.signedUrl && (
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-          <div>
-            <p className="text-[14px] font-medium text-[var(--foreground)]">
-              {latestVersion.versionLabel}
-            </p>
-            <p className="text-[12px] text-[var(--text-muted)]">Uploaded {formatDate(latestVersion.createdAt)}</p>
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[14px] font-medium text-[var(--foreground)]">
+                {latestVersion.versionLabel}
+              </p>
+              <p className="text-[12px] text-[var(--text-muted)]">Uploaded {formatDate(latestVersion.createdAt)}</p>
+            </div>
+            <a
+              href={latestVersion.signedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-xl bg-[var(--primary)] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 transition"
+            >
+              Open proof
+            </a>
           </div>
-          <a
-            href={latestVersion.signedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 rounded-xl bg-[var(--primary)] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 transition"
-          >
-            Open proof
-          </a>
+          {latestVersion.notes && (
+            <div className="border-t border-[var(--border)] pt-3">
+              <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">
+                What changed
+              </p>
+              <p className="text-[14px] leading-6 text-[var(--foreground)] whitespace-pre-wrap">
+                {latestVersion.notes}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
