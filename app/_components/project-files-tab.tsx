@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AppSurface } from "@canopy/ui";
 import type { CreateItem, CreateRequestAttachment } from "@/lib/create-types";
 
@@ -26,13 +25,6 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
-const ITEM_STATUS_LABEL: Record<string, string> = {
-  pending: "Not started",
-  in_progress: "In production",
-  in_review: "Ready for review",
-  completed: "Complete",
-};
-
 export default function ProjectFilesTab({
   items,
   versionsByItem,
@@ -48,11 +40,28 @@ export default function ProjectFilesTab({
   workspaceId: string;
   projectId: string;
 }) {
-  const hasAttachments = requestAttachments.length > 0;
-  const hasVersions = Object.values(versionsByItem).some((v) => v.length > 0);
-  const hasDelivered = deliveredFiles.length > 0;
+  // Build a flat list of all version files, newest first
+  const itemMap = new Map(items.map((i) => [i.id, i]));
+  const allVersions = Object.values(versionsByItem)
+    .flat()
+    .filter((v) => v.signedUrl)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-  if (!hasAttachments && !hasVersions && !hasDelivered && items.length === 0) {
+  // Track which items have a delivered final file so we can badge the latest
+  const deliveredItemIds = new Set(deliveredFiles.filter((d) => d.signedUrl).map((d) => d.item.id));
+
+  // Find the latest version per item (for "Latest" badge)
+  const latestVersionByItem = new Map<string, string>();
+  for (const v of allVersions) {
+    if (!latestVersionByItem.has(v.item_id)) {
+      latestVersionByItem.set(v.item_id, v.id);
+    }
+  }
+
+  const hasFiles = allVersions.length > 0 || deliveredFiles.some((d) => d.signedUrl);
+  const hasAttachments = requestAttachments.length > 0;
+
+  if (!hasFiles && !hasAttachments) {
     return (
       <AppSurface className="px-6 py-6 sm:px-8">
         <p className="text-[13px] text-[var(--text-muted)]">
@@ -64,121 +73,74 @@ export default function ProjectFilesTab({
 
   return (
     <div className="space-y-4">
-      {/* Delivered files */}
-      {hasDelivered && (
-        <AppSurface className="px-6 py-6 sm:px-8">
-          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            Your files
+      {/* All files — flat list, newest first */}
+      <AppSurface className="px-6 py-6 sm:px-8">
+        <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          Files
+        </p>
+
+        {!hasFiles ? (
+          <p className="mt-3 text-[13px] text-[var(--text-muted)]">
+            No files uploaded yet. They'll appear here as work progresses.
           </p>
-          <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
-            Final delivered files ready to download.
-          </p>
+        ) : (
           <div className="mt-4 divide-y divide-[var(--border)]">
-            {deliveredFiles.map(({ item, signedUrl, versionLabel }) => (
-              <div key={item.id} className="flex items-center justify-between gap-4 py-3.5">
-                <div className="min-w-0">
-                  <p className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</p>
-                  {versionLabel && (
-                    <p className="text-[12px] text-[var(--text-muted)]">{versionLabel}</p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                    Delivered
-                  </span>
-                  {signedUrl && (
+            {allVersions.map((v) => {
+              const item = itemMap.get(v.item_id);
+              const isLatest = latestVersionByItem.get(v.item_id) === v.id;
+              const isDelivered = deliveredItemIds.has(v.item_id) && isLatest;
+
+              return (
+                <div key={v.id} className="flex items-center justify-between gap-4 py-3.5">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[14px] font-medium text-[var(--foreground)] truncate">
+                        {item?.title ?? "File"}
+                      </p>
+                      {isDelivered ? (
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          Final
+                        </span>
+                      ) : isLatest ? (
+                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                          Latest
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
+                      {v.version_label} · {formatDate(v.created_at)}
+                    </p>
+                    {v.notes && (
+                      <p className="mt-0.5 text-[12px] text-[var(--text-muted)] italic">{v.notes}</p>
+                    )}
+                  </div>
+                  {v.signedUrl && (
                     <a
-                      href={signedUrl}
+                      href={v.signedUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
+                      className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
                     >
                       Download
                     </a>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        </AppSurface>
-      )}
-
-      {/* Proof versions by deliverable */}
-      {items.length > 0 && (
-        <AppSurface className="px-6 py-6 sm:px-8">
-          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            Proofs
-          </p>
-          <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
-            Drafts and versions uploaded for review.
-          </p>
-          <div className="mt-4 space-y-5">
-            {items.map((item) => {
-              const versions = versionsByItem[item.id] ?? [];
-              const isDelivered = !!item.delivered_at;
-              return (
-                <div key={item.id}>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</p>
-                    <span className={`text-[11px] font-medium ${
-                      isDelivered ? "text-emerald-600"
-                      : item.status === "in_review" ? "text-amber-600"
-                      : item.status === "in_progress" ? "text-blue-600"
-                      : "text-[var(--text-muted)]"
-                    }`}>
-                      {isDelivered ? "Delivered" : ITEM_STATUS_LABEL[item.status] ?? item.status}
-                    </span>
-                  </div>
-                  {versions.length === 0 ? (
-                    <p className="mt-2 text-[12px] text-[var(--text-muted)]">No versions uploaded yet.</p>
-                  ) : (
-                    <div className="mt-2 space-y-2">
-                      {versions.map((v) => (
-                        <div key={v.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-4 py-3">
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-[var(--foreground)]">{v.version_label}</p>
-                            <p className="text-[11px] text-[var(--text-muted)]">{formatDate(v.created_at)}</p>
-                            {v.notes && <p className="mt-1 text-[12px] text-[var(--text-muted)]">{v.notes}</p>}
-                          </div>
-                          {v.signedUrl && (
-                            <a
-                              href={v.signedUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
-                            >
-                              Download
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!isDelivered && item.status === "in_review" && (
-                    <Link
-                      href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${projectId}`}
-                      className="mt-2 inline-block rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 hover:bg-amber-100 transition"
-                    >
-                      Review & give feedback →
-                    </Link>
-                  )}
-                </div>
               );
             })}
           </div>
-        </AppSurface>
-      )}
+        )}
+      </AppSurface>
 
       {/* Reference files from the original request */}
       {hasAttachments && (
         <AppSurface className="px-6 py-6 sm:px-8">
-          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
             Reference files
           </p>
-          <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
-            Files you included with your original request.
+          <p className="mt-1 text-[12px] text-[var(--text-muted)]">
+            Files from your original request.
           </p>
-          <div className="mt-4 divide-y divide-[var(--border)]">
+          <div className="mt-3 divide-y divide-[var(--border)]">
             {requestAttachments.map((att) => (
               <div key={att.id} className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
