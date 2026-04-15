@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import {
   createItem,
   createMilestone,
+  deleteProject,
   getItem,
   getProject,
   logActivity,
@@ -289,4 +290,22 @@ export async function addProjectMessageAction(
   });
 
   revalidatePath(`/projects/${projectId}`, "page");
+}
+
+export async function deleteProjectAction(
+  workspaceId: string,
+  projectId: string
+): Promise<void> {
+  if (!workspaceId || !projectId) {
+    throw new Error("Workspace and project are required.");
+  }
+
+  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  if (!canManageProjects(role, isPlatformOperator)) {
+    throw new Error("You do not have permission to delete projects.");
+  }
+
+  await deleteProject(workspaceId, projectId);
+
+  redirect(`/projects?workspace=${encodeURIComponent(workspaceId)}`);
 }

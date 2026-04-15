@@ -22,9 +22,11 @@ import {
 } from "@/lib/create-data";
 import MilestoneTimeline from "@/app/_components/milestone-timeline";
 import MilestoneAddForm from "@/app/_components/milestone-add-form";
+import DeleteProjectButton from "@/app/_components/delete-project-button";
 import {
   addItemAction,
   changeProjectStatus,
+  deleteProjectAction,
 } from "@/app/projects/actions";
 import { getServerActionAccess } from "@/lib/server-auth";
 import { canManageProjects, canUpdateDeliverables, isClientRole } from "@/lib/create-roles";
@@ -535,7 +537,7 @@ export default async function ProjectDetailPage({
           </div>
 
           {canManage && (
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
               {PROJECT_STATUS_OPTIONS.map(({ value, label }) => {
                 const action = changeProjectStatus.bind(null, workspaceId, project.id, value);
                 return (
@@ -549,6 +551,11 @@ export default async function ProjectDetailPage({
                   </form>
                 );
               })}
+              <DeleteProjectButton
+                workspaceId={workspaceId}
+                projectId={project.id}
+                projectTitle={project.title}
+              />
             </div>
           )}
         </div>

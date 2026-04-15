@@ -15,8 +15,12 @@ type ProjectsPageProps = {
 };
 
 const ACTIVE_PROJECT_STATUSES = ["draft", "active"] as const;
+const ARCHIVED_PROJECT_STATUSES = ["archived"] as const;
+const COMPLETED_PROJECT_STATUSES = ["completed"] as const;
 
-function getFilterValue(filterParam: string | string[] | undefined) {
+type FilterValue = "active" | "archived" | "all";
+
+function getFilterValue(filterParam: string | string[] | undefined): FilterValue {
   const rawValue =
     typeof filterParam === "string"
       ? filterParam
@@ -24,7 +28,9 @@ function getFilterValue(filterParam: string | string[] | undefined) {
         ? filterParam[0] ?? "active"
         : "active";
 
-  return rawValue === "all" ? "all" : "active";
+  if (rawValue === "archived") return "archived";
+  if (rawValue === "all") return "all";
+  return "active";
 }
 
 function formatLabel(value: string) {
@@ -55,19 +61,25 @@ export default async function ProjectsPage({
         ? workspaceParam[0] ?? ""
         : "";
 
+  const statusFilter =
+    currentFilter === "active"
+      ? [...ACTIVE_PROJECT_STATUSES]
+      : currentFilter === "archived"
+        ? [...ARCHIVED_PROJECT_STATUSES, ...COMPLETED_PROJECT_STATUSES]
+        : undefined;
+
   const projects = workspaceId
-    ? await listProjects(
-        workspaceId,
-        currentFilter === "active" ? [...ACTIVE_PROJECT_STATUSES] : undefined
-      )
+    ? await listProjects(workspaceId, statusFilter)
     : [];
 
-  const activeHref = workspaceId
-    ? `/projects?workspace=${encodeURIComponent(workspaceId)}&filter=active`
-    : "/projects?filter=active";
-  const allHref = workspaceId
-    ? `/projects?workspace=${encodeURIComponent(workspaceId)}&filter=all`
-    : "/projects?filter=all";
+  const baseHref = workspaceId
+    ? `/projects?workspace=${encodeURIComponent(workspaceId)}`
+    : "/projects";
+  const FILTER_TABS: { value: FilterValue; label: string }[] = [
+    { value: "active", label: "Active" },
+    { value: "archived", label: "Archived" },
+    { value: "all", label: "All" },
+  ];
 
   return (
     <ClientShell activeNav="projects">
@@ -78,18 +90,15 @@ export default async function ProjectsPage({
         </BodyText>
 
         <div className="mt-5 flex gap-1">
-          <Button
-            asChild
-            variant={currentFilter === "active" ? "primary" : "secondary"}
-          >
-            <Link href={activeHref}>Active</Link>
-          </Button>
-          <Button
-            asChild
-            variant={currentFilter === "all" ? "primary" : "secondary"}
-          >
-            <Link href={allHref}>All</Link>
-          </Button>
+          {FILTER_TABS.map((tab) => (
+            <Button
+              key={tab.value}
+              asChild
+              variant={currentFilter === tab.value ? "primary" : "secondary"}
+            >
+              <Link href={`${baseHref}&filter=${tab.value}`}>{tab.label}</Link>
+            </Button>
+          ))}
         </div>
 
         <div className="mt-6">
@@ -99,7 +108,9 @@ export default async function ProjectsPage({
             <BodyText muted>
               {currentFilter === "active"
                 ? "No active projects for this workspace."
-                : "No projects found for this workspace."}
+                : currentFilter === "archived"
+                  ? "No archived projects."
+                  : "No projects found for this workspace."}
             </BodyText>
           ) : (
             <div className="divide-y divide-[var(--border)]">

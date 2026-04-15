@@ -231,6 +231,22 @@ export async function createProject(
   return requireSingleRow(data as CreateProject | null, error);
 }
 
+export async function deleteProject(
+  workspaceId: string,
+  projectId: string
+): Promise<void> {
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { error } = await client
+    .from("create_projects")
+    .delete()
+    .eq("workspace_id", resolvedWorkspaceId)
+    .eq("id", projectId);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function updateProject(
   workspaceId: string,
   projectId: string,
