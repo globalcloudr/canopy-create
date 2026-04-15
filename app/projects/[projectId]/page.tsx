@@ -246,8 +246,23 @@ export default async function ProjectDetailPage({
       ([, v]) => typeof v === "string" && v.trim() !== ""
     ) as [string, string][];
 
+    // Filter milestones: school clients only see visibility=all
+    const clientMilestones = milestones.filter((m) => m.visibility === "all");
+    const clientMilestonesCompleted = clientMilestones.filter(
+      (m) => m.milestone_status === "completed"
+    ).length;
+
+    // Find next upcoming due date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextDue = clientMilestones
+      .filter((m) => m.due_date && m.milestone_status !== "completed")
+      .sort((a, b) => a.due_date!.localeCompare(b.due_date!))
+      .at(0);
+
     const SCHOOL_TABS = [
       { key: "activity", label: "Activity" },
+      ...(clientMilestones.length > 0 ? [{ key: "timeline", label: "Timeline" }] : []),
       { key: "files", label: "Files" },
       { key: "brief", label: "Brief" },
     ];
@@ -356,6 +371,18 @@ export default async function ProjectDetailPage({
                 </AppSurface>
               )}
 
+              {activeTab === "timeline" && clientMilestones.length > 0 && (
+                <AppSurface className="px-6 py-6 sm:px-8">
+                  <MilestoneTimeline
+                    workspaceId={workspaceId}
+                    projectId={projectId}
+                    milestones={clientMilestones}
+                    nameMap={activityNameMap}
+                    canEdit={false}
+                  />
+                </AppSurface>
+              )}
+
               {activeTab === "files" && (
                 <ProjectFilesTab
                   items={items}
@@ -398,6 +425,22 @@ export default async function ProjectDetailPage({
                       {items.length === 0 ? "None yet" : `${deliveredItems.length} of ${items.length} delivered`}
                     </dd>
                   </div>
+                  {clientMilestones.length > 0 && (
+                    <div>
+                      <dt className="text-[12px] text-[var(--text-muted)]">Progress</dt>
+                      <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                        {clientMilestonesCompleted} of {clientMilestones.length} steps complete
+                      </dd>
+                    </div>
+                  )}
+                  {nextDue?.due_date && (
+                    <div>
+                      <dt className="text-[12px] text-[var(--text-muted)]">Next milestone</dt>
+                      <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                        {formatDate(nextDue.due_date)}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </AppSurface>
 
