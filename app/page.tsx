@@ -203,7 +203,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5 max-w-3xl">
+        <div className="space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -236,7 +236,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </Link>
           </AppSurface>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
 
             {/* Action needed */}
             {hasActions && (
@@ -270,9 +270,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </div>
             )}
 
-            {/* Job list */}
+            {/* Job cards — responsive grid */}
             {jobs.length > 0 && (
-              <div className="space-y-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {jobs.map((job) => {
                   if (job.kind === "request") {
                     const statusKey = job.request.status;
@@ -284,17 +284,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <Link
                         key={job.request.id}
                         href={`/requests/${job.request.id}?workspace=${encodeURIComponent(workspaceId)}`}
-                        className="group flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
+                        className="group flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 hover:border-[var(--primary)] transition"
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                            {job.request.title}
-                          </p>
-                          <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-                            {typeLabel} · Submitted {date}
-                          </p>
+                        <p className="truncate text-[15px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                          {job.request.title}
+                        </p>
+                        <p className="mt-1 text-[12px] text-[var(--text-muted)]">
+                          {typeLabel} · Submitted {date}
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                          <span className={`text-[12px] font-medium ${color}`}>{label}</span>
                         </div>
-                        <span className={`shrink-0 text-[12px] font-medium ${color}`}>{label}</span>
                       </Link>
                     );
                   }
@@ -312,32 +312,32 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <Link
                       key={job.project.id}
                       href={`/projects/${job.project.id}?workspace=${encodeURIComponent(workspaceId)}`}
-                      className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 hover:border-[var(--primary)] transition"
+                      className="group flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 hover:border-[var(--primary)] transition"
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                            {job.project.title}
-                          </p>
-                          <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-                            {typeLabel} · Started {date}
-                          </p>
+                      <p className="truncate text-[15px] font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                        {job.project.title}
+                      </p>
+                      <p className="mt-1 text-[12px] text-[var(--text-muted)]">
+                        {typeLabel} · Started {date}
+                      </p>
+                      <div className="mt-auto pt-3 border-t border-[var(--border)] mt-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className={`text-[12px] font-medium ${color}`}>{label}</span>
+                          {total > 0 && (
+                            <span className="text-[11px] text-[var(--text-muted)]">
+                              {completed}/{total} steps
+                            </span>
+                          )}
                         </div>
-                        <span className={`shrink-0 text-[12px] font-medium ${color}`}>{label}</span>
-                      </div>
-                      {total > 0 && (
-                        <div className="mt-3">
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
+                        {total > 0 && (
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
                             <div
                               className="h-full rounded-full bg-[var(--primary)] transition-all"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                            {completed} of {total} steps complete
-                          </p>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </Link>
                   );
                 })}

@@ -183,7 +183,7 @@ export default async function ItemDetailPage({
 
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5 max-w-3xl">
+        <div className="space-y-5">
 
           {/* Header */}
           <div>
@@ -205,33 +205,36 @@ export default async function ItemDetailPage({
             )}
           </div>
 
-          {/* Proof review */}
-          <AppSurface className="px-6 py-6 sm:px-8">
-            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
-              {item.delivered_at ? "Your file" : "Proof"}
-            </p>
-            <ClientProofReview
-              workspaceId={workspaceId}
-              itemId={itemId}
-              projectId={resolvedProjectId}
-              latestVersion={latestVersion}
-              existingApproval={existingApproval}
-              isDelivered={!!item.delivered_at}
-            />
-          </AppSurface>
+          {/* Two-column: proof left, messages right */}
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+            {/* Left — proof review */}
+            <AppSurface className="px-6 py-6 sm:px-8">
+              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
+                {item.delivered_at ? "Your file" : "Proof"}
+              </p>
+              <ClientProofReview
+                workspaceId={workspaceId}
+                itemId={itemId}
+                projectId={resolvedProjectId}
+                latestVersion={latestVersion}
+                existingApproval={existingApproval}
+                isDelivered={!!item.delivered_at}
+              />
+            </AppSurface>
 
-          {/* Messages */}
-          <AppSurface className="px-6 py-6 sm:px-8">
-            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
-              Messages
-            </p>
-            <ItemComments
-              workspaceId={workspaceId}
-              itemId={itemId}
-              projectId={resolvedProjectId}
-              comments={comments}
-            />
-          </AppSurface>
+            {/* Right — messages */}
+            <AppSurface className="px-6 py-6 sm:px-8">
+              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
+                Messages
+              </p>
+              <ItemComments
+                workspaceId={workspaceId}
+                itemId={itemId}
+                projectId={resolvedProjectId}
+                comments={comments}
+              />
+            </AppSurface>
+          </div>
 
         </div>
       </SchoolShell>

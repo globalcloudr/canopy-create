@@ -231,7 +231,7 @@ export default async function ProjectDetailPage({
 
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5 max-w-3xl">
+        <div className="space-y-5">
 
           {/* Header */}
           <div>
@@ -318,31 +318,99 @@ export default async function ProjectDetailPage({
             </div>
           )}
 
-          {/* Tabs */}
-          <ProjectTabs tabs={SCHOOL_TABS} activeTab={activeTab} baseUrl={baseUrl} />
+          {/* Two-column: main content + sidebar */}
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
 
-          {/* Tab content */}
-          {activeTab === "activity" && (
-            <AppSurface className="px-6 py-6 sm:px-8">
-              <ProjectMessageComposer workspaceId={workspaceId} projectId={projectId} />
-              <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
-            </AppSurface>
-          )}
+            {/* Left — tabs + tab content */}
+            <div className="space-y-5">
+              <ProjectTabs tabs={SCHOOL_TABS} activeTab={activeTab} baseUrl={baseUrl} />
 
-          {activeTab === "files" && (
-            <ProjectFilesTab
-              items={items}
-              versionsByItem={versionsByItem}
-              requestAttachments={attachmentsWithUrls}
-              deliveredFiles={deliveredFiles}
-              workspaceId={workspaceId}
-              projectId={projectId}
-            />
-          )}
+              {activeTab === "activity" && (
+                <AppSurface className="px-6 py-6 sm:px-8">
+                  <ProjectMessageComposer workspaceId={workspaceId} projectId={projectId} />
+                  <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
+                </AppSurface>
+              )}
 
-          {activeTab === "brief" && (
-            <ProjectBriefTab briefEntries={briefEntries} />
-          )}
+              {activeTab === "files" && (
+                <ProjectFilesTab
+                  items={items}
+                  versionsByItem={versionsByItem}
+                  requestAttachments={attachmentsWithUrls}
+                  deliveredFiles={deliveredFiles}
+                  workspaceId={workspaceId}
+                  projectId={projectId}
+                />
+              )}
+
+              {activeTab === "brief" && (
+                <ProjectBriefTab briefEntries={briefEntries} />
+              )}
+            </div>
+
+            {/* Right — sidebar */}
+            <div className="space-y-5">
+              {/* Job details */}
+              <AppSurface className="px-6 py-6 sm:px-8">
+                <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                  Details
+                </p>
+                <dl className="mt-4 space-y-4">
+                  <div>
+                    <dt className="text-[12px] text-[var(--text-muted)]">Type</dt>
+                    <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                      {formatLabel(project.workflow_family)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[12px] text-[var(--text-muted)]">Submitted</dt>
+                    <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                      {formatDate(project.created_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[12px] text-[var(--text-muted)]">Deliverables</dt>
+                    <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                      {items.length === 0 ? "None yet" : `${deliveredItems.length} of ${items.length} delivered`}
+                    </dd>
+                  </div>
+                </dl>
+              </AppSurface>
+
+              {/* Quick links to deliverables */}
+              {items.length > 0 && (
+                <AppSurface className="px-6 py-6 sm:px-8">
+                  <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    Deliverables
+                  </p>
+                  <div className="mt-3 divide-y divide-[var(--border)]">
+                    {items.map((item) => {
+                      const isDelivered = !!item.delivered_at;
+                      return (
+                        <Link
+                          key={item.id}
+                          href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
+                          className="group flex items-center justify-between gap-3 py-3"
+                        >
+                          <p className="text-[13px] font-medium text-[var(--foreground)] group-hover:text-[var(--primary)] truncate">
+                            {item.title}
+                          </p>
+                          <span className={`shrink-0 text-[11px] font-medium ${
+                            isDelivered ? "text-emerald-600"
+                            : item.status === "in_review" ? "text-amber-600"
+                            : item.status === "in_progress" ? "text-blue-600"
+                            : "text-[var(--text-muted)]"
+                          }`}>
+                            {isDelivered ? "Delivered" : formatLabel(item.status)}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </AppSurface>
+              )}
+            </div>
+          </div>
 
         </div>
       </SchoolShell>

@@ -185,7 +185,8 @@ export default async function RequestDetailPage({
 
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5 max-w-3xl">
+        <div className="space-y-5">
+          {/* Header */}
           <div>
             <Link
               href={`/?workspace=${encodeURIComponent(workspaceId)}`}
@@ -215,28 +216,67 @@ export default async function RequestDetailPage({
             </AppSurface>
           )}
 
-          {briefFields.length > 0 && (
-            <AppSurface className="px-6 py-6 sm:px-8">
-              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-2">
-                What you submitted
-              </p>
-              <dl className="divide-y divide-[var(--border)]">
-                {briefFields.map(({ key, def, value }) => (
-                  <BriefField key={key} label={def.label} value={value} hint={def.hint} />
-                ))}
-              </dl>
-            </AppSurface>
-          )}
+          {/* Two-column: brief left, sidebar right */}
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+            {/* Left — brief */}
+            {briefFields.length > 0 ? (
+              <AppSurface className="px-6 py-6 sm:px-8">
+                <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-2">
+                  What you submitted
+                </p>
+                <dl className="divide-y divide-[var(--border)]">
+                  {briefFields.map(({ key, def, value }) => (
+                    <BriefField key={key} label={def.label} value={value} hint={def.hint} />
+                  ))}
+                </dl>
+              </AppSurface>
+            ) : (
+              <AppSurface className="px-6 py-6 sm:px-8">
+                <p className="text-[13px] text-[var(--text-muted)]">
+                  No brief details were submitted.
+                </p>
+              </AppSurface>
+            )}
 
-          {attachments.length > 0 && (
-            <AppSurface className="px-6 py-6 sm:px-8">
-              <RequestAttachments
-                workspaceId={workspaceId}
-                requestId={requestId}
-                attachments={attachments}
-              />
-            </AppSurface>
-          )}
+            {/* Right — details + attachments */}
+            <div className="space-y-5">
+              <AppSurface className="px-6 py-6 sm:px-8">
+                <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                  Details
+                </p>
+                <dl className="mt-4 space-y-4">
+                  <div>
+                    <dt className="text-[12px] text-[var(--text-muted)]">Type</dt>
+                    <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                      {formatLabel(request.request_type)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[12px] text-[var(--text-muted)]">Submitted</dt>
+                    <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                      {formatDate(request.created_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[12px] text-[var(--text-muted)]">Status</dt>
+                    <dd className="mt-0.5 text-[14px] text-[var(--foreground)]">
+                      {statusMessage[request.status] ?? formatLabel(request.status)}
+                    </dd>
+                  </div>
+                </dl>
+              </AppSurface>
+
+              {attachments.length > 0 && (
+                <AppSurface className="px-6 py-6 sm:px-8">
+                  <RequestAttachments
+                    workspaceId={workspaceId}
+                    requestId={requestId}
+                    attachments={attachments}
+                  />
+                </AppSurface>
+              )}
+            </div>
+          </div>
         </div>
       </SchoolShell>
     );
