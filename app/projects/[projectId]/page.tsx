@@ -4,19 +4,16 @@ import { AppSurface, Badge, BodyText, Button, Input } from "@canopy/ui";
 
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";
-import MilestoneChecklist from "@/app/_components/milestone-checklist";
 import ItemStatusSelect from "@/app/_components/item-status-select";
 import ActivityFeed from "@/app/_components/activity-feed";
 import {
   getProject,
   getRequest,
-  listMilestones,
   listProjectItems,
   listProjectActivity,
 } from "@/lib/create-data";
 import {
   addItemAction,
-  addMilestoneAction,
   changeProjectStatus,
 } from "@/app/projects/actions";
 import { getServerActionAccess } from "@/lib/server-auth";
@@ -82,9 +79,8 @@ export default async function ProjectDetailPage({
     return <ClientShell activeNav="projects"><div /></ClientShell>;
   }
 
-  const [project, milestones, items, activityEvents] = await Promise.all([
+  const [project, items, activityEvents] = await Promise.all([
     getProject(workspaceId, projectId),
-    listMilestones(workspaceId, projectId),
     listProjectItems(workspaceId, projectId),
     listProjectActivity(workspaceId, projectId),
   ]);
@@ -351,10 +347,7 @@ export default async function ProjectDetailPage({
     ? `/requests/${project.origin_request_id}?workspace=${encodeURIComponent(workspaceId)}`
     : null;
 
-  const addMilestoneForProject = addMilestoneAction.bind(null, workspaceId, project.id);
   const addItemForProject = addItemAction.bind(null, workspaceId, project.id, items.length);
-
-  const completedMilestones = milestones.filter((m) => m.status === "completed").length;
 
   return (
     <ClientShell activeNav="projects">
@@ -410,58 +403,22 @@ export default async function ProjectDetailPage({
           )}
         </div>
 
-        {/* Production steps */}
-        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
-          <div className="flex items-baseline justify-between">
-            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-              Production Steps
-            </p>
-            {milestones.length > 0 && (
-              <span className="text-[13px] text-[var(--text-muted)]">
-                {completedMilestones} / {milestones.length} complete
-              </span>
-            )}
-          </div>
-
-          {milestones.length > 0 && (
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
-              <div
-                className="h-full rounded-full bg-[var(--primary)] transition-all"
-                style={{
-                  width: `${Math.round((completedMilestones / milestones.length) * 100)}%`,
-                }}
-              />
-            </div>
-          )}
-
-          <div className="mt-5">
-            <MilestoneChecklist
-              workspaceId={workspaceId}
-              projectId={project.id}
-              milestones={milestones}
-              canToggle={canManage}
-            />
-          </div>
-
-          {canManage && (
-            <form action={addMilestoneForProject} className="mt-4 flex gap-3">
-              <Input name="title" placeholder="Add a step…" className="flex-1 text-sm" />
-              <Button type="submit" variant="secondary">Add</Button>
-            </form>
-          )}
-        </AppSurface>
-
         {/* Deliverables */}
         <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
           <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
             Deliverables
           </p>
           <BodyText muted className="mt-0.5">
-            Track each piece being produced, revised, and approved.
+            Each deliverable is one file or output you're producing for this job — e.g. "Fall Catalog Cover", "Instagram Story Set", "Graduation Flyer (Print)". Add one per distinct piece. Each gets its own proof review and approval from the school.
           </BodyText>
 
           {items.length === 0 ? (
-            <BodyText muted className="mt-5">No deliverables added yet.</BodyText>
+            <div className="mt-5 rounded-2xl border border-dashed border-[var(--border)] px-5 py-6 text-center">
+              <p className="text-[14px] font-medium text-[var(--foreground)]">No deliverables yet</p>
+              <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                Add the individual outputs for this job above — one entry per file or design piece.
+              </p>
+            </div>
           ) : (
             <div className="mt-4 divide-y divide-[var(--border)]">
               {items.map((item, index) => (
