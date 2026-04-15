@@ -6,11 +6,18 @@ import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";
 import ItemStatusSelect from "@/app/_components/item-status-select";
 import ActivityFeed from "@/app/_components/activity-feed";
+import ProjectTabs from "@/app/_components/project-tabs";
+import ProjectMessageComposer from "@/app/_components/project-message-composer";
+import ProjectBriefTab from "@/app/_components/project-brief-tab";
+import ProjectFilesTab from "@/app/_components/project-files-tab";
 import {
   getProject,
   getRequest,
   listProjectItems,
   listProjectActivity,
+  listVersionsForItems,
+  listApprovalsForItems,
+  listRequestAttachments,
 } from "@/lib/create-data";
 import {
   addItemAction,
@@ -21,7 +28,7 @@ import { canManageProjects, canUpdateDeliverables, isClientRole } from "@/lib/cr
 
 type ProjectDetailPageProps = {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ workspace?: string | string[] }>;
+  searchParams: Promise<{ workspace?: string | string[]; tab?: string | string[] }>;
 };
 
 function formatLabel(value: string) {
@@ -61,6 +68,9 @@ export default async function ProjectDetailPage({
         ? workspaceParam[0] ?? ""
         : "";
 
+  const tabParam = resolvedSearchParams.tab;
+  const rawTab = typeof tabParam === "string" ? tabParam : Array.isArray(tabParam) ? tabParam[0] : undefined;
+
   if (!workspaceId) {
     return (
       <ClientShell activeNav="projects">
@@ -79,14 +89,30 @@ export default async function ProjectDetailPage({
     return <ClientShell activeNav="projects"><div /></ClientShell>;
   }
 
+  // ─── Stage 1: Core data (parallel) ───────────────────────────────────────────
   const [project, items, activityEvents] = await Promise.all([
     getProject(workspaceId, projectId),
     listProjectItems(workspaceId, projectId),
     listProjectActivity(workspaceId, projectId),
   ]);
 
-  // Fetch origin request brief for school user view (best effort)
+  // ─── Stage 2: Related data (needs item IDs from stage 1) ─────────────────────
+  const itemIds = items.map((i) => i.id);
+
   let originRequest: Awaited<ReturnType<typeof getRequest>> | null = null;
+  const serviceClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const [rawVersions, rawAttachments] = await Promise.all([
+    listVersionsForItems(workspaceId, itemIds),
+    project.origin_request_id
+      ? listRequestAttachments(workspaceId, project.origin_request_id)
+      : Promise.resolve([]),
+  ]);
+
+  // Fetch origin request (best effort)
   if (project.origin_request_id) {
     try {
       originRequest = await getRequest(workspaceId, project.origin_request_id);
@@ -95,15 +121,35 @@ export default async function ProjectDetailPage({
     }
   }
 
-  const canManage = canManageProjects(role, isPlatformOperator);
-  const canUpdateStatus = canUpdateDeliverables(role, isPlatformOperator);
-
-  // Build delivered files list for client view
-  const deliveredItems = items.filter((item) => !!item.delivered_at);
-  const serviceClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  // ─── Generate signed URLs for all versions ────────────────────────────────────
+  const versionsWithUrls = await Promise.all(
+    rawVersions.map(async (v) => {
+      if (!v.file_url) return { ...v, signedUrl: null };
+      const { data } = await serviceClient.storage
+        .from("originals")
+        .createSignedUrl(v.file_url, 3600);
+      return { ...v, signedUrl: data?.signedUrl ?? null };
+    })
   );
+
+  // Group versions by item
+  const versionsByItem: Record<string, typeof versionsWithUrls> = {};
+  for (const v of versionsWithUrls) {
+    (versionsByItem[v.item_id] ??= []).push(v);
+  }
+
+  // Generate signed URLs for attachments
+  const attachmentsWithUrls = await Promise.all(
+    rawAttachments.map(async (att) => {
+      const { data } = await serviceClient.storage
+        .from("originals")
+        .createSignedUrl(att.file_url, 3600);
+      return { ...att, signedUrl: data?.signedUrl ?? null };
+    })
+  );
+
+  // Build delivered files list
+  const deliveredItems = items.filter((item) => !!item.delivered_at);
   const deliveredFiles = await Promise.all(
     deliveredItems.map(async (item) => {
       if (!item.final_version_id) return { item, signedUrl: null, filename: null };
@@ -125,8 +171,10 @@ export default async function ProjectDetailPage({
     })
   );
 
-  // Resolve actor display names for activity feed
-  const actorIds = [...new Set(activityEvents.map((e) => e.actor_user_id))];
+  // ─── Resolve actor display names ──────────────────────────────────────────────
+  const allActorIds = new Set(activityEvents.map((e) => e.actor_user_id));
+  for (const v of rawVersions) allActorIds.add(v.created_by);
+  const actorIds = [...allActorIds];
   const activityNameMap: Record<string, string> = {};
   if (actorIds.length > 0) {
     const { data: profiles } = await serviceClient
@@ -137,6 +185,12 @@ export default async function ProjectDetailPage({
       activityNameMap[p.user_id] = p.display_name ?? p.full_name ?? "Team member";
     }
   }
+
+  const canManage = canManageProjects(role, isPlatformOperator);
+  const canUpdateStatus = canUpdateDeliverables(role, isPlatformOperator);
+
+  // Base URL for tab switching (without tab param)
+  const baseUrl = `/projects/${projectId}?workspace=${encodeURIComponent(workspaceId)}`;
 
   // ─── School (client) view ──────────────────────────────────────────────────────
   if (isClientRole(role) && !isPlatformOperator) {
@@ -155,13 +209,6 @@ export default async function ProjectDetailPage({
     const STEP_LABELS = ["Received", "In Production", "Ready for Review", "Delivered"];
     const reviewItems = items.filter((i) => i.status === "in_review" && !i.delivered_at);
 
-    const ITEM_STATUS_LABEL: Record<string, string> = {
-      pending: "Not started",
-      in_progress: "In production",
-      in_review: "Ready for review",
-      completed: "Complete",
-    };
-
     const STAGE_MESSAGE: Record<string, string> = {
       received: "We've received your job and are reviewing your brief. We'll update this page once production begins.",
       production: "We're working on your job now. We'll let you know when your proof is ready to review.",
@@ -175,9 +222,12 @@ export default async function ProjectDetailPage({
       ([, v]) => typeof v === "string" && v.trim() !== ""
     ) as [string, string][];
 
-    function briefLabel(key: string) {
-      return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    }
+    const SCHOOL_TABS = [
+      { key: "activity", label: "Activity" },
+      { key: "files", label: "Files" },
+      { key: "brief", label: "Brief" },
+    ];
+    const activeTab = SCHOOL_TABS.some((t) => t.key === rawTab) ? rawTab! : "activity";
 
     return (
       <SchoolShell activeNav="home">
@@ -258,83 +308,40 @@ export default async function ProjectDetailPage({
             </div>
           )}
 
-          {/* What we're making */}
-          {items.length > 0 && (
-            <AppSurface className="px-6 py-6 sm:px-8">
-              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                What we're making for you
-              </p>
-              <div className="mt-4 divide-y divide-[var(--border)]">
-                {items.map((item) => {
-                  const isDelivered = !!item.delivered_at;
-                  const df = deliveredFiles.find((f) => f?.item.id === item.id);
-                  return (
-                    <div key={item.id} className="flex items-center justify-between gap-4 py-3.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</p>
-                        <p className={`mt-0.5 text-[12px] font-medium ${
-                          isDelivered ? "text-emerald-600"
-                          : item.status === "in_review" ? "text-amber-600"
-                          : item.status === "in_progress" ? "text-blue-600"
-                          : "text-[var(--text-muted)]"
-                        }`}>
-                          {isDelivered ? "Delivered" : ITEM_STATUS_LABEL[item.status] ?? item.status}
-                        </p>
-                      </div>
-                      {isDelivered && df?.signedUrl && (
-                        <a
-                          href={df.signedUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
-                        >
-                          Download
-                        </a>
-                      )}
-                      {!isDelivered && item.status === "in_review" && (
-                        <Link
-                          href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
-                          className="shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 hover:bg-amber-100 transition"
-                        >
-                          Review →
-                        </Link>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </AppSurface>
-          )}
-
           {/* All delivered */}
           {stage === "delivered" && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-5 text-center">
               <p className="text-[15px] font-semibold text-emerald-700">All done!</p>
               <p className="mt-1 text-[13px] text-emerald-600">
-                Everything has been delivered. Download your files above.
+                Everything has been delivered. Download your files from the Files tab.
               </p>
             </div>
           )}
 
-          {/* What you submitted */}
-          {briefEntries.length > 0 && (
+          {/* Tabs */}
+          <ProjectTabs tabs={SCHOOL_TABS} activeTab={activeTab} baseUrl={baseUrl} />
+
+          {/* Tab content */}
+          {activeTab === "activity" && (
             <AppSurface className="px-6 py-6 sm:px-8">
-              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] mb-4">
-                What you submitted
-              </p>
-              <dl className="divide-y divide-[var(--border)]">
-                {briefEntries.map(([key, value]) => (
-                  <div key={key} className="py-3.5">
-                    <dt className="text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                      {briefLabel(key)}
-                    </dt>
-                    <dd className="mt-1 text-[14px] leading-6 text-[var(--foreground)] whitespace-pre-wrap">
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              <ProjectMessageComposer workspaceId={workspaceId} projectId={projectId} />
+              <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
             </AppSurface>
+          )}
+
+          {activeTab === "files" && (
+            <ProjectFilesTab
+              items={items}
+              versionsByItem={versionsByItem}
+              requestAttachments={attachmentsWithUrls}
+              deliveredFiles={deliveredFiles}
+              workspaceId={workspaceId}
+              projectId={projectId}
+            />
+          )}
+
+          {activeTab === "brief" && (
+            <ProjectBriefTab briefEntries={briefEntries} />
           )}
 
         </div>
@@ -348,6 +355,13 @@ export default async function ProjectDetailPage({
     : null;
 
   const addItemForProject = addItemAction.bind(null, workspaceId, project.id, items.length);
+
+  const INTERNAL_TABS = [
+    { key: "activity", label: "Activity" },
+    { key: "deliverables", label: "Deliverables" },
+    { key: "files", label: "Files" },
+  ];
+  const activeTab = INTERNAL_TABS.some((t) => t.key === rawTab) ? rawTab! : "activity";
 
   return (
     <ClientShell activeNav="projects">
@@ -403,123 +417,87 @@ export default async function ProjectDetailPage({
           )}
         </div>
 
-        {/* Deliverables */}
-        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
-          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            Deliverables
-          </p>
-          <BodyText muted className="mt-0.5">
-            Each deliverable is one file or output you're producing for this job — e.g. "Fall Catalog Cover", "Instagram Story Set", "Graduation Flyer (Print)". Add one per distinct piece. Each gets its own proof review and approval from the school.
-          </BodyText>
+        {/* Tabs */}
+        <ProjectTabs tabs={INTERNAL_TABS} activeTab={activeTab} baseUrl={baseUrl} />
 
-          {items.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-[var(--border)] px-5 py-6 text-center">
-              <p className="text-[14px] font-medium text-[var(--foreground)]">No deliverables yet</p>
-              <p className="mt-1 text-[13px] text-[var(--text-muted)]">
-                Add the individual outputs for this job above — one entry per file or design piece.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4 divide-y divide-[var(--border)]">
-              {items.map((item, index) => (
-                <div key={item.id} className="flex items-center gap-4 py-3.5">
-                  <span className="w-5 shrink-0 text-[13px] text-[var(--text-muted)]">
-                    {index + 1}
-                  </span>
-                  <Link
-                    href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
-                    className="min-w-0 flex-1 text-[14px] font-medium text-[var(--foreground)] hover:text-[var(--primary)] hover:underline"
-                  >
-                    {item.title}
-                  </Link>
-                  {item.delivered_at ? (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                      Delivered
-                    </span>
-                  ) : canUpdateStatus ? (
-                    <ItemStatusSelect
-                      workspaceId={workspaceId}
-                      projectId={project.id}
-                      itemId={item.id}
-                      currentStatus={item.status}
-                      statuses={[...ITEM_STATUSES]}
-                    />
-                  ) : (
-                    <span className="text-[13px] font-medium text-[var(--text-muted)]">
-                      {formatLabel(item.status)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {canManage && (
-            <form action={addItemForProject} className="mt-4 flex gap-3">
-              <Input name="title" placeholder="Add a deliverable…" className="flex-1 text-sm" />
-              <Button type="submit" variant="secondary">Add</Button>
-            </form>
-          )}
-        </AppSurface>
-
-        {/* Delivered Files — shown when at least one deliverable is delivered */}
-        {deliveredFiles.length > 0 && (
+        {/* Tab content */}
+        {activeTab === "activity" && (
           <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
-            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-              Delivered Files
-            </p>
-            <BodyText muted className="mt-0.5">
-              Final files ready for download.
-            </BodyText>
-            <div className="mt-4 divide-y divide-[var(--border)]">
-              {deliveredFiles.map(({ item, signedUrl, versionLabel }) => (
-                <div key={item.id} className="flex items-center justify-between gap-4 py-3.5">
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</p>
-                    {versionLabel && (
-                      <p className="text-[12px] text-[var(--text-muted)]">{versionLabel}</p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                      Delivered
-                    </span>
-                    {signedUrl ? (
-                      <a
-                        href={signedUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
-                      >
-                        Download
-                      </a>
-                    ) : (
-                      <Link
-                        href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
-                        className="text-[12px] text-[var(--primary)] hover:underline"
-                      >
-                        View
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ProjectMessageComposer workspaceId={workspaceId} projectId={projectId} />
+            <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
           </AppSurface>
         )}
 
-        {/* Activity feed */}
-        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
-          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            Activity
-          </p>
-          <BodyText muted className="mt-0.5">
-            A timeline of actions taken on this project.
-          </BodyText>
-          <div className="mt-5">
-            <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
-          </div>
-        </AppSurface>
+        {activeTab === "deliverables" && (
+          <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              Deliverables
+            </p>
+            <BodyText muted className="mt-0.5">
+              Each deliverable is one file or output you're producing for this job.
+            </BodyText>
+
+            {items.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-dashed border-[var(--border)] px-5 py-6 text-center">
+                <p className="text-[14px] font-medium text-[var(--foreground)]">No deliverables yet</p>
+                <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+                  Add the individual outputs for this job above — one entry per file or design piece.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-[var(--border)]">
+                {items.map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-4 py-3.5">
+                    <span className="w-5 shrink-0 text-[13px] text-[var(--text-muted)]">
+                      {index + 1}
+                    </span>
+                    <Link
+                      href={`/items/${item.id}?workspace=${encodeURIComponent(workspaceId)}&project=${project.id}`}
+                      className="min-w-0 flex-1 text-[14px] font-medium text-[var(--foreground)] hover:text-[var(--primary)] hover:underline"
+                    >
+                      {item.title}
+                    </Link>
+                    {item.delivered_at ? (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                        Delivered
+                      </span>
+                    ) : canUpdateStatus ? (
+                      <ItemStatusSelect
+                        workspaceId={workspaceId}
+                        projectId={project.id}
+                        itemId={item.id}
+                        currentStatus={item.status}
+                        statuses={[...ITEM_STATUSES]}
+                      />
+                    ) : (
+                      <span className="text-[13px] font-medium text-[var(--text-muted)]">
+                        {formatLabel(item.status)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {canManage && (
+              <form action={addItemForProject} className="mt-4 flex gap-3">
+                <Input name="title" placeholder="Add a deliverable…" className="flex-1 text-sm" />
+                <Button type="submit" variant="secondary">Add</Button>
+              </form>
+            )}
+          </AppSurface>
+        )}
+
+        {activeTab === "files" && (
+          <ProjectFilesTab
+            items={items}
+            versionsByItem={versionsByItem}
+            requestAttachments={attachmentsWithUrls}
+            deliveredFiles={deliveredFiles}
+            workspaceId={workspaceId}
+            projectId={projectId}
+          />
+        )}
 
       </div>
     </ClientShell>

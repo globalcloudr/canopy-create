@@ -110,6 +110,7 @@ export type ActivityEventType =
   | "project_status_changed"
   | "milestone_completed"
   | "milestone_uncompleted"
+  | "item_created"
   | "item_status_changed"
   | "version_uploaded"
   | "comment_added"

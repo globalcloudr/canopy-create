@@ -113,7 +113,7 @@ export async function addItemAction(
   const title = String(formData.get("title") ?? "").trim();
   if (!workspaceId || !projectId || !title) return;
 
-  const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
   if (!canManageProjects(role, isPlatformOperator)) {
     throw new Error("You do not have permission to add deliverables.");
   }
@@ -131,6 +131,14 @@ export async function addItemAction(
     delivered_at: null,
     final_version_id: null,
     sort_order: sortOrder,
+  });
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: item.id,
+    actor_user_id: user.id,
+    event_type: "item_created",
+    metadata: { item_title: title },
   });
 
   // Sync to Plane — fire and store, never block on failure
@@ -174,6 +182,27 @@ export async function changeItemStatusAction(
     actor_user_id: user.id,
     event_type: "item_status_changed",
     metadata: { item_title: item.title, from: fromStatus, to: newStatus },
+  });
+
+  revalidatePath(`/projects/${projectId}`, "page");
+}
+
+export async function addProjectMessageAction(
+  workspaceId: string,
+  projectId: string,
+  formData: FormData
+): Promise<void> {
+  const body = String(formData.get("body") ?? "").trim();
+  if (!workspaceId || !projectId || !body) return;
+
+  const { user } = await getServerActionAccess(workspaceId);
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: null,
+    actor_user_id: user.id,
+    event_type: "comment_added",
+    metadata: { body, preview: body.slice(0, 120) },
   });
 
   revalidatePath(`/projects/${projectId}`, "page");

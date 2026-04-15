@@ -18,14 +18,19 @@ function describeEvent(event: CreateActivityEvent): string {
       return `completed step "${m.title}"`;
     case "milestone_uncompleted":
       return `unchecked step "${m.title}"`;
+    case "item_created":
+      return `created deliverable "${m.item_title}"`;
     case "item_status_changed": {
       const to = formatLabel(String(m.to ?? ""));
       return `updated "${m.item_title}" to ${to}`;
     }
     case "version_uploaded":
       return `uploaded ${m.version_label} of "${m.item_title}"`;
-    case "comment_added":
+    case "comment_added": {
+      // Project-level messages have no item_id
+      if (!event.item_id) return "";
       return `commented on "${m.item_title}"${m.preview ? `: "${m.preview}"` : ""}`;
+    }
     case "item_approved": {
       const decisionLabel =
         m.decision === "approved"
@@ -40,6 +45,11 @@ function describeEvent(event: CreateActivityEvent): string {
     default:
       return "performed an action";
   }
+}
+
+/** Check if event is a project-level message (not an item comment) */
+function isProjectMessage(event: CreateActivityEvent): boolean {
+  return event.event_type === "comment_added" && !event.item_id;
 }
 
 // ─── Timestamp ────────────────────────────────────────────────────────────────
@@ -89,6 +99,9 @@ export default function ActivityFeed({
       {events.map((event, idx) => {
         const name = nameMap[event.actor_user_id] ?? "Team member";
         const isLast = idx === events.length - 1;
+        const isMessage = isProjectMessage(event);
+        const messageBody = isMessage ? String((event.metadata ?? {}).body ?? "") : "";
+
         return (
           <li key={event.id} className="relative flex gap-3">
             {/* Vertical connector line */}
@@ -106,13 +119,29 @@ export default function ActivityFeed({
 
             {/* Content */}
             <div className="min-w-0 flex-1 pb-5">
-              <p className="text-[13px] text-[var(--foreground)] leading-snug">
-                <span className="font-medium">{name}</span>{" "}
-                {describeEvent(event)}
-              </p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                {formatRelativeTime(event.created_at)}
-              </p>
+              {isMessage ? (
+                <>
+                  <p className="text-[13px] leading-snug">
+                    <span className="font-medium text-[var(--foreground)]">{name}</span>
+                  </p>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap">
+                    {messageBody}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                    {formatRelativeTime(event.created_at)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[13px] text-[var(--foreground)] leading-snug">
+                    <span className="font-medium">{name}</span>{" "}
+                    {describeEvent(event)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                    {formatRelativeTime(event.created_at)}
+                  </p>
+                </>
+              )}
             </div>
           </li>
         );

@@ -632,3 +632,62 @@ export async function listProjectActivity(
   if (error) throw new Error(error.message);
   return (data ?? []) as CreateActivityEvent[];
 }
+
+// ─── Batch queries (cross-item) ─────────────────────────────────────────────
+
+export async function listCommentsForItems(
+  workspaceId: string,
+  itemIds: string[]
+): Promise<CreateItemComment[]> {
+  if (itemIds.length === 0) return [];
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_item_comments")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .in("item_id", itemIds)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateItemComment[];
+}
+
+export async function listVersionsForItems(
+  workspaceId: string,
+  itemIds: string[]
+): Promise<CreateItemVersion[]> {
+  if (itemIds.length === 0) return [];
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_item_versions")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .in("item_id", itemIds)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateItemVersion[];
+}
+
+export async function listApprovalsForItems(
+  workspaceId: string,
+  itemIds: string[]
+): Promise<CreateApproval[]> {
+  if (itemIds.length === 0) return [];
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_approvals")
+    .select("*")
+    .eq("workspace_id", resolvedWorkspaceId)
+    .in("item_id", itemIds)
+    .order("decided_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateApproval[];
+}
