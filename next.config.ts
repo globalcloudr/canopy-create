@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   experimental: {
     externalDir: true,
   },
+  serverActions: {
+    bodySizeLimit: "25mb",
+  },
 };
 
 export default nextConfig;
