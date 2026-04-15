@@ -18,6 +18,15 @@ function describeEvent(event: CreateActivityEvent): string {
       return `completed step "${m.title}"`;
     case "milestone_uncompleted":
       return `unchecked step "${m.title}"`;
+    case "milestone_status_changed": {
+      const changes = Array.isArray(m.changes) ? m.changes : [];
+      if (changes.includes("milestone_status") && m.milestone_status) {
+        return `updated step to ${formatLabel(String(m.milestone_status))}`;
+      }
+      return `updated a production step`;
+    }
+    case "milestone_created":
+      return `added step "${m.title}"`;
     case "item_created":
       return `created deliverable "${m.item_title}"`;
     case "item_status_changed": {

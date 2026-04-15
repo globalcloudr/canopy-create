@@ -15,10 +15,13 @@ import {
   getRequest,
   listProjectItems,
   listProjectActivity,
+  listMilestones,
   listVersionsForItems,
   listApprovalsForItems,
   listRequestAttachments,
 } from "@/lib/create-data";
+import MilestoneTimeline from "@/app/_components/milestone-timeline";
+import MilestoneAddForm from "@/app/_components/milestone-add-form";
 import {
   addItemAction,
   changeProjectStatus,
@@ -93,11 +96,13 @@ export default async function ProjectDetailPage({
   let project: Awaited<ReturnType<typeof getProject>>;
   let items: Awaited<ReturnType<typeof listProjectItems>>;
   let activityEvents: Awaited<ReturnType<typeof listProjectActivity>>;
+  let milestones: Awaited<ReturnType<typeof listMilestones>>;
   try {
-    [project, items, activityEvents] = await Promise.all([
+    [project, items, activityEvents, milestones] = await Promise.all([
       getProject(workspaceId, projectId),
       listProjectItems(workspaceId, projectId),
       listProjectActivity(workspaceId, projectId),
+      listMilestones(workspaceId, projectId),
     ]);
   } catch {
     // Project doesn't exist in this workspace (e.g. workspace was switched)
@@ -190,6 +195,9 @@ export default async function ProjectDetailPage({
   // ─── Resolve actor display names ──────────────────────────────────────────────
   const allActorIds = new Set(activityEvents.map((e) => e.actor_user_id));
   for (const v of rawVersions) allActorIds.add(v.created_by);
+  for (const m of milestones) {
+    if (m.assignee_id) allActorIds.add(m.assignee_id);
+  }
   const actorIds = [...allActorIds];
   const activityNameMap: Record<string, string> = {};
   if (actorIds.length > 0) {
@@ -442,6 +450,7 @@ export default async function ProjectDetailPage({
 
   const INTERNAL_TABS = [
     { key: "activity", label: "Activity" },
+    { key: "timeline", label: "Timeline" },
     { key: "deliverables", label: "Deliverables" },
     { key: "files", label: "Files" },
   ];
@@ -509,6 +518,32 @@ export default async function ProjectDetailPage({
           <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
             <ProjectMessageComposer workspaceId={workspaceId} projectId={projectId} />
             <ActivityFeed events={activityEvents} nameMap={activityNameMap} />
+          </AppSurface>
+        )}
+
+        {activeTab === "timeline" && (
+          <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+            <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              Production Timeline
+            </p>
+            <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
+              Track each step from start to delivery.
+            </p>
+            <div className="mt-5">
+              <MilestoneTimeline
+                workspaceId={workspaceId}
+                projectId={projectId}
+                milestones={milestones}
+                nameMap={activityNameMap}
+                canEdit={canManage}
+              />
+            </div>
+            {canManage && (
+              <MilestoneAddForm
+                workspaceId={workspaceId}
+                projectId={projectId}
+              />
+            )}
           </AppSurface>
         )}
 
