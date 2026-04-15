@@ -203,6 +203,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
     return (
       <SchoolShell activeNav="home">
+        <div className="space-y-5 max-w-3xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -386,6 +387,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           </div>
         )}
+        </div>
       </SchoolShell>
     );
   }

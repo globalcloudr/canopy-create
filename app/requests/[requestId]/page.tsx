@@ -185,7 +185,7 @@ export default async function RequestDetailPage({
 
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5 max-w-2xl">
+        <div className="space-y-5 max-w-3xl">
           <div>
             <Link
               href={`/?workspace=${encodeURIComponent(workspaceId)}`}

@@ -81,7 +81,7 @@ export default function NewRequestClient({
 
   return (
     <Shell activeNav={activeNav}>
-      <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+      <AppSurface className={`px-6 py-6 sm:px-8 sm:py-8 ${isSchoolUser ? "max-w-3xl" : ""}`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <SectionTitle>{isSchoolUser ? "New Job" : "New Request"}</SectionTitle>

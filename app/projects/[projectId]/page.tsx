@@ -231,7 +231,7 @@ export default async function ProjectDetailPage({
 
     return (
       <SchoolShell activeNav="home">
-        <div className="space-y-5 max-w-2xl">
+        <div className="space-y-5 max-w-3xl">
 
           {/* Header */}
           <div>
