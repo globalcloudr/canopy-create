@@ -19,3 +19,11 @@ export type ApprovalDecision =
   | "approved"
   | "approved_with_changes"
   | "changes_requested";
+
+export type MilestoneStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed"
+  | "blocked";
+
+export type MilestoneVisibility = "all" | "internal";

@@ -9,9 +9,10 @@ import type {
   CreateRequest,
   CreateRequestAttachment,
   CreateProject,
+  CreateProjectTemplate,
   Milestone,
 } from "@/lib/create-types";
-import type { ApprovalDecision } from "@/lib/create-status";
+import type { ApprovalDecision, MilestoneVisibility, MilestoneStatus } from "@/lib/create-status";
 
 // ─── Service client ───────────────────────────────────────────────────────────
 
@@ -328,6 +329,7 @@ export async function listMilestones(
     .select("*")
     .eq("workspace_id", resolvedWorkspaceId)
     .eq("project_id", projectId)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -351,6 +353,7 @@ export async function listMilestonesForProjects(
     .select("*")
     .eq("workspace_id", resolvedWorkspaceId)
     .in("project_id", projectIds)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -377,21 +380,42 @@ export async function listItemsForProjects(
   return (data ?? []) as CreateItem[];
 }
 
+export interface CreateMilestonePayload {
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  assignee_id?: string | null;
+  visibility?: MilestoneVisibility;
+  milestone_status?: MilestoneStatus;
+  sort_order?: number;
+}
+
 export async function createMilestone(
   workspaceId: string,
   projectId: string,
-  title: string
+  payload: string | CreateMilestonePayload
 ): Promise<Milestone> {
   const client = getServiceClient();
   const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const row =
+    typeof payload === "string"
+      ? { title: payload }
+      : payload;
 
   const { data, error } = await client
     .from("create_milestones")
     .insert({
       workspace_id: resolvedWorkspaceId,
       project_id: projectId,
-      title,
       status: "pending",
+      milestone_status: row.milestone_status ?? "not_started",
+      visibility: row.visibility ?? "all",
+      title: row.title,
+      description: row.description ?? null,
+      due_date: row.due_date ?? null,
+      assignee_id: row.assignee_id ?? null,
+      sort_order: row.sort_order ?? 0,
     })
     .select("*")
     .eq("workspace_id", resolvedWorkspaceId)
@@ -400,17 +424,60 @@ export async function createMilestone(
   return requireSingleRow(data as Milestone | null, error);
 }
 
+/** Bulk-insert milestones for a project (e.g. from a template). */
+export async function createMilestonesBatch(
+  workspaceId: string,
+  projectId: string,
+  milestones: CreateMilestonePayload[]
+): Promise<void> {
+  if (milestones.length === 0) return;
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const rows = milestones.map((m, i) => ({
+    workspace_id: resolvedWorkspaceId,
+    project_id: projectId,
+    status: "pending",
+    milestone_status: m.milestone_status ?? "not_started",
+    visibility: m.visibility ?? "all",
+    title: m.title,
+    description: m.description ?? null,
+    due_date: m.due_date ?? null,
+    assignee_id: m.assignee_id ?? null,
+    sort_order: m.sort_order ?? i,
+  }));
+
+  const { error } = await client
+    .from("create_milestones")
+    .insert(rows);
+
+  if (error) throw new Error(error.message);
+}
+
+export type UpdateMilestonePayload = Partial<{
+  status: string;
+  milestone_status: MilestoneStatus;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  assignee_id: string | null;
+  visibility: MilestoneVisibility;
+  sort_order: number;
+}>;
+
 export async function updateMilestone(
   workspaceId: string,
   milestoneId: string,
-  status: string
+  payload: string | UpdateMilestonePayload
 ): Promise<Milestone> {
   const client = getServiceClient();
   const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
 
+  const updateData = typeof payload === "string" ? { status: payload } : payload;
+
   const { data, error } = await client
     .from("create_milestones")
-    .update({ status })
+    .update(updateData)
     .eq("workspace_id", resolvedWorkspaceId)
     .eq("id", milestoneId)
     .select("*")
@@ -690,4 +757,36 @@ export async function listApprovalsForItems(
 
   if (error) throw new Error(error.message);
   return (data ?? []) as CreateApproval[];
+}
+
+// ─── Project templates ──────────────────────────────────────────────────────
+
+export async function getTemplate(
+  templateId: string
+): Promise<CreateProjectTemplate> {
+  const client = getServiceClient();
+
+  const { data, error } = await client
+    .from("create_project_templates")
+    .select("*")
+    .eq("id", templateId)
+    .maybeSingle();
+
+  return requireSingleRow(data as CreateProjectTemplate | null, error);
+}
+
+export async function listTemplates(
+  workspaceId: string
+): Promise<CreateProjectTemplate[]> {
+  const client = getServiceClient();
+  const resolvedWorkspaceId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data, error } = await client
+    .from("create_project_templates")
+    .select("*")
+    .or(`workspace_id.eq.${resolvedWorkspaceId},workspace_id.is.null`)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CreateProjectTemplate[];
 }

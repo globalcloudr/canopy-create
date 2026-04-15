@@ -13,7 +13,7 @@ import {
   updateMilestone,
   updateProject,
 } from "@/lib/create-data";
-import type { ItemStatus, ProjectStatus } from "@/lib/create-status";
+import type { ItemStatus, MilestoneStatus, MilestoneVisibility, ProjectStatus } from "@/lib/create-status";
 import { getServerActionAccess } from "@/lib/server-auth";
 import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
 import { createPlaneIssue } from "@/lib/plane-client";
@@ -27,12 +27,36 @@ export async function addMilestoneAction(
     throw new Error("Workspace and project are required.");
   }
 
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  if (!canManageProjects(role, isPlatformOperator)) {
+    throw new Error("You do not have permission to add production steps.");
+  }
+
   const title = String(formData.get("title") ?? "").trim();
   if (!title) {
     throw new Error("Milestone title is required.");
   }
 
-  await createMilestone(workspaceId, projectId, title);
+  const dueDate = formData.get("due_date") ? String(formData.get("due_date")) : null;
+  const description = formData.get("description") ? String(formData.get("description")).trim() : null;
+  const visibility = (formData.get("visibility") as MilestoneVisibility) ?? "all";
+  const assigneeId = formData.get("assignee_id") ? String(formData.get("assignee_id")) : null;
+
+  const milestone = await createMilestone(workspaceId, projectId, {
+    title,
+    due_date: dueDate,
+    description,
+    visibility,
+    assignee_id: assigneeId,
+  });
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: null,
+    actor_user_id: user.id,
+    event_type: "milestone_created",
+    metadata: { title, milestone_id: milestone.id },
+  });
 
   redirect(`/projects/${projectId}?workspace=${encodeURIComponent(workspaceId)}`);
 }
@@ -54,7 +78,11 @@ export async function toggleMilestoneStatusAction(
   }
 
   const newStatus = currentStatus === "completed" ? "pending" : "completed";
-  await updateMilestone(workspaceId, milestoneId, newStatus);
+  const newMilestoneStatus: MilestoneStatus = newStatus === "completed" ? "completed" : "not_started";
+  await updateMilestone(workspaceId, milestoneId, {
+    status: newStatus,
+    milestone_status: newMilestoneStatus,
+  });
 
   await logActivity(workspaceId, {
     project_id: projectId,
@@ -182,6 +210,61 @@ export async function changeItemStatusAction(
     actor_user_id: user.id,
     event_type: "item_status_changed",
     metadata: { item_title: item.title, from: fromStatus, to: newStatus },
+  });
+
+  revalidatePath(`/projects/${projectId}`, "page");
+}
+
+export async function updateMilestoneAction(
+  workspaceId: string,
+  projectId: string,
+  milestoneId: string,
+  formData: FormData
+): Promise<void> {
+  if (!workspaceId || !projectId || !milestoneId) {
+    throw new Error("Workspace, project, and milestone are required.");
+  }
+
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  if (!canManageProjects(role, isPlatformOperator)) {
+    throw new Error("You do not have permission to update production steps.");
+  }
+
+  const payload: Record<string, unknown> = {};
+
+  const title = formData.get("title");
+  if (title !== null) payload.title = String(title).trim();
+
+  const description = formData.get("description");
+  if (description !== null) payload.description = String(description).trim() || null;
+
+  const dueDate = formData.get("due_date");
+  if (dueDate !== null) payload.due_date = String(dueDate) || null;
+
+  const assigneeId = formData.get("assignee_id");
+  if (assigneeId !== null) payload.assignee_id = String(assigneeId) || null;
+
+  const visibility = formData.get("visibility");
+  if (visibility !== null) payload.visibility = String(visibility) as MilestoneVisibility;
+
+  const milestoneStatus = formData.get("milestone_status");
+  if (milestoneStatus !== null) {
+    const newStatus = String(milestoneStatus) as MilestoneStatus;
+    payload.milestone_status = newStatus;
+    // Keep legacy status in sync
+    payload.status = newStatus === "completed" ? "completed" : "pending";
+  }
+
+  if (Object.keys(payload).length === 0) return;
+
+  await updateMilestone(workspaceId, milestoneId, payload);
+
+  await logActivity(workspaceId, {
+    project_id: projectId,
+    item_id: null,
+    actor_user_id: user.id,
+    event_type: "milestone_status_changed",
+    metadata: { milestone_id: milestoneId, changes: Object.keys(payload) },
   });
 
   revalidatePath(`/projects/${projectId}`, "page");

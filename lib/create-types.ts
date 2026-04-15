@@ -3,6 +3,8 @@ import type {
   ApprovalDecision,
   ApprovalState,
   ItemStatus,
+  MilestoneStatus,
+  MilestoneVisibility,
   ProjectStatus,
   RequestStatus,
 } from "@/lib/create-status";
@@ -33,6 +35,8 @@ export interface CreateProject {
   status: ProjectStatus;
   template_key: string | null;
   plane_project_id: string | null;
+  cycle_number: number;
+  origin_project_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +66,12 @@ export interface Milestone {
   project_id: string;
   title: string;
   status: "pending" | "completed";
+  sort_order: number;
+  due_date: string | null;
+  assignee_id: string | null;
+  description: string | null;
+  visibility: MilestoneVisibility;
+  milestone_status: MilestoneStatus;
   created_at: string;
 }
 
@@ -110,6 +120,8 @@ export type ActivityEventType =
   | "project_status_changed"
   | "milestone_completed"
   | "milestone_uncompleted"
+  | "milestone_status_changed"
+  | "milestone_created"
   | "item_created"
   | "item_status_changed"
   | "version_uploaded"
@@ -126,4 +138,28 @@ export interface CreateActivityEvent {
   event_type: ActivityEventType;
   metadata: Record<string, unknown> | null;
   created_at: string;
+}
+
+export interface CreateProjectTemplate {
+  id: string;
+  workspace_id: string | null;
+  name: string;
+  workflow_family: string;
+  description: string | null;
+  milestone_definitions: MilestoneDefinition[];
+  deliverable_definitions: DeliverableDefinition[];
+  created_at: string;
+}
+
+export interface MilestoneDefinition {
+  title: string;
+  description?: string;
+  default_offset_days: number;
+  visibility: MilestoneVisibility;
+  assignee_role?: string;
+}
+
+export interface DeliverableDefinition {
+  title: string;
+  item_type: string;
 }

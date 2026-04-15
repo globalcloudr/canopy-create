@@ -142,6 +142,8 @@ export async function convertRequestToProject(
     status: "active",
     template_key: null,
     plane_project_id: null,
+    cycle_number: 1,
+    origin_project_id: null,
   });
 
   // Sync to Plane — fire and store, never block on failure
