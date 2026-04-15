@@ -124,6 +124,33 @@ export async function createPlaneIssue(
 }
 
 /**
+ * Creates multiple Plane issues inside a project (e.g. from milestone templates).
+ * Returns an array of { title, planeIssueId } for each successfully created issue.
+ * Individual failures are logged but don't stop the batch.
+ */
+export async function createPlaneIssuesBatch(
+  planeProjectId: string,
+  items: { title: string; description?: string }[]
+): Promise<{ title: string; planeIssueId: string }[]> {
+  const results: { title: string; planeIssueId: string }[] = [];
+
+  for (const item of items) {
+    try {
+      const issueId = await createPlaneIssue(
+        planeProjectId,
+        item.title,
+        item.description
+      );
+      results.push({ title: item.title, planeIssueId: issueId });
+    } catch (err) {
+      console.error(`[Plane sync] Failed to create issue "${item.title}":`, err);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Updates a Plane issue's state by state ID.
  */
 export async function updatePlaneIssueState(

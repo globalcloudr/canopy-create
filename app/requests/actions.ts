@@ -21,7 +21,7 @@ import {
 } from "@/lib/create-validators";
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
 import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
-import { createPlaneProject } from "@/lib/plane-client";
+import { createPlaneProject, createPlaneIssuesBatch } from "@/lib/plane-client";
 import { resolveTemplate, generateMilestonesFromTemplate } from "@/lib/create-templates";
 
 export type CreateRequestActionState = {
@@ -152,8 +152,9 @@ export async function convertRequestToProject(
   });
 
   // Sync to Plane — fire and store, never block on failure
+  let planeProjectId: string | null = null;
   try {
-    const planeProjectId = await createPlaneProject(
+    planeProjectId = await createPlaneProject(
       request.title,
       newProject.id.slice(0, 8), // use first 8 chars of UUID as identifier seed
       `${request.title} — Canopy Create`
@@ -171,6 +172,19 @@ export async function convertRequestToProject(
         new Date()
       );
       await createMilestonesBatch(workspaceId, newProject.id, milestones);
+
+      // Sync milestone steps to Plane as work items so designers see them
+      if (planeProjectId) {
+        try {
+          const planeItems = milestones.map((m) => ({
+            title: m.title,
+            description: m.description ?? undefined,
+          }));
+          await createPlaneIssuesBatch(planeProjectId, planeItems);
+        } catch (err) {
+          console.error("[Plane sync] Failed to create milestone issues:", err);
+        }
+      }
     } catch (err) {
       console.error("[Template] Failed to auto-create milestones:", err);
     }
