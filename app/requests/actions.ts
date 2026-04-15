@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   addRequestAttachment,
+  createMilestonesBatch,
   createProject,
   createRequest,
   getRequest,
@@ -21,6 +22,7 @@ import {
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
 import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
 import { createPlaneProject } from "@/lib/plane-client";
+import { resolveTemplate, generateMilestonesFromTemplate } from "@/lib/create-templates";
 
 export type CreateRequestActionState = {
   error: string | null;
@@ -135,12 +137,15 @@ export async function convertRequestToProject(
     );
   }
 
+  // Resolve template before creating project so we can set template_key
+  const template = resolveTemplate(request.workflow_family, request.request_type);
+
   const newProject = await createProject(workspaceId, {
     origin_request_id: request.id,
     title: request.title,
     workflow_family: request.workflow_family,
     status: "active",
-    template_key: null,
+    template_key: template?.key ?? null,
     plane_project_id: null,
     cycle_number: 1,
     origin_project_id: null,
@@ -156,6 +161,19 @@ export async function convertRequestToProject(
     await updateProject(workspaceId, newProject.id, { plane_project_id: planeProjectId });
   } catch (err) {
     console.error("[Plane sync] Failed to create Plane project:", err);
+  }
+
+  // Auto-create milestones from template — fire-and-forget (never blocks conversion)
+  if (template) {
+    try {
+      const milestones = generateMilestonesFromTemplate(
+        template.milestone_definitions,
+        new Date()
+      );
+      await createMilestonesBatch(workspaceId, newProject.id, milestones);
+    } catch (err) {
+      console.error("[Template] Failed to auto-create milestones:", err);
+    }
   }
 
   await updateRequest(workspaceId, requestId, {
