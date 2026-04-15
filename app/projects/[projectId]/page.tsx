@@ -90,11 +90,27 @@ export default async function ProjectDetailPage({
   }
 
   // ─── Stage 1: Core data (parallel) ───────────────────────────────────────────
-  const [project, items, activityEvents] = await Promise.all([
-    getProject(workspaceId, projectId),
-    listProjectItems(workspaceId, projectId),
-    listProjectActivity(workspaceId, projectId),
-  ]);
+  let project: Awaited<ReturnType<typeof getProject>>;
+  let items: Awaited<ReturnType<typeof listProjectItems>>;
+  let activityEvents: Awaited<ReturnType<typeof listProjectActivity>>;
+  try {
+    [project, items, activityEvents] = await Promise.all([
+      getProject(workspaceId, projectId),
+      listProjectItems(workspaceId, projectId),
+      listProjectActivity(workspaceId, projectId),
+    ]);
+  } catch {
+    // Project doesn't exist in this workspace (e.g. workspace was switched)
+    const Shell = isClientRole(role) && !isPlatformOperator ? SchoolShell : ClientShell;
+    const nav = isClientRole(role) && !isPlatformOperator ? "home" : "projects";
+    return (
+      <Shell activeNav={nav}>
+        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+          <BodyText muted>This project wasn't found in the current workspace.</BodyText>
+        </AppSurface>
+      </Shell>
+    );
+  }
 
   // ─── Stage 2: Related data (needs item IDs from stage 1) ─────────────────────
   const itemIds = items.map((i) => i.id);

@@ -134,10 +134,24 @@ export default async function RequestDetailPage({
     return <ClientShell activeNav="requests"><div /></ClientShell>;
   }
 
-  const [request, rawAttachments] = await Promise.all([
-    getRequest(workspaceId, requestId),
-    listRequestAttachments(workspaceId, requestId),
-  ]);
+  let request: Awaited<ReturnType<typeof getRequest>>;
+  let rawAttachments: Awaited<ReturnType<typeof listRequestAttachments>>;
+  try {
+    [request, rawAttachments] = await Promise.all([
+      getRequest(workspaceId, requestId),
+      listRequestAttachments(workspaceId, requestId),
+    ]);
+  } catch {
+    const Shell = isClientRole(role) && !isPlatformOperator ? SchoolShell : ClientShell;
+    const nav = isClientRole(role) && !isPlatformOperator ? "home" : "requests";
+    return (
+      <Shell activeNav={nav}>
+        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+          <BodyText muted>This request wasn't found in the current workspace.</BodyText>
+        </AppSurface>
+      </Shell>
+    );
+  }
 
   const canManage = canManageProjects(role, isPlatformOperator);
   const schoolUser = isClientRole(role) && !isPlatformOperator;
