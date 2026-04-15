@@ -35,14 +35,24 @@ function formatLabel(value: string) {
 
 type FieldDef = { label: string; hint?: "url" | "date" | "multiline" };
 
+const DESIGN_PROJECT_FIELDS: Record<string, FieldDef> = {
+  description:   { label: "Description", hint: "multiline" },
+  audience:      { label: "Audience" },
+  format:        { label: "Format" },
+  quantity:      { label: "Print Quantity" },
+  delivery_date: { label: "Delivery Date", hint: "date" },
+};
+
 const BRIEF_FIELDS: Record<string, Record<string, FieldDef>> = {
-  design_project: {
-    description:   { label: "Description", hint: "multiline" },
-    audience:      { label: "Audience" },
-    format:        { label: "Format" },
-    quantity:      { label: "Print Quantity" },
-    delivery_date: { label: "Delivery Date", hint: "date" },
-  },
+  // All design_production subtypes share the same brief fields
+  catalog_project:    DESIGN_PROJECT_FIELDS,
+  brochure_project:   DESIGN_PROJECT_FIELDS,
+  flyer_project:      DESIGN_PROJECT_FIELDS,
+  postcard_project:   DESIGN_PROJECT_FIELDS,
+  banner_project:     DESIGN_PROJECT_FIELDS,
+  fact_sheet_project: DESIGN_PROJECT_FIELDS,
+  design_project:     DESIGN_PROJECT_FIELDS,
+  other:              DESIGN_PROJECT_FIELDS,
   website_update: {
     target_url:           { label: "Target URL", hint: "url" },
     update_details:       { label: "Update Details", hint: "multiline" },
@@ -57,6 +67,13 @@ const BRIEF_FIELDS: Record<string, Record<string, FieldDef>> = {
     featured_events:   { label: "Events & Key Dates", hint: "multiline" },
   },
   social_media_request: {
+    target_platforms:  { label: "Target Platforms" },
+    tone:              { label: "Tone" },
+    campaign_goals:    { label: "Campaign Goals", hint: "multiline" },
+    call_to_action:    { label: "Call to Action" },
+    desired_post_date: { label: "Desired Post Date", hint: "date" },
+  },
+  campaign_support_request: {
     target_platforms:  { label: "Target Platforms" },
     tone:              { label: "Tone" },
     campaign_goals:    { label: "Campaign Goals", hint: "multiline" },
