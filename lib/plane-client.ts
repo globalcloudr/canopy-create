@@ -67,11 +67,13 @@ export async function createPlaneProject(
 ): Promise<string> {
   const { workspaceSlug } = getConfig();
 
-  // Plane identifiers: uppercase, 2–12 chars, alphanumeric only
+  // Plane identifiers: uppercase, 2–12 chars, alphanumeric only, must be unique
+  // Use last 8 chars of UUID (most random part) to reduce collision risk
   const safeIdentifier = identifier
+    .slice(-8)
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 12)
+    .slice(0, 10)
     .padEnd(2, "X");
 
   const project = await planeRequest<PlaneProject>(
@@ -115,7 +117,7 @@ export async function createPlaneIssue(
     `/workspaces/${workspaceSlug}/projects/${planeProjectId}/issues/`,
     {
       name: title,
-      description_html: description ? `<p>${description}</p>` : "",
+      description_html: description ? `<p>${description}</p>` : "<p></p>",
       priority: "medium",
     }
   );

@@ -178,7 +178,7 @@ export async function addItemAction(
       await updateItem(workspaceId, item.id, { plane_issue_id: planeIssueId });
     }
   } catch (err) {
-    console.error("[Plane sync] Failed to create Plane issue:", err);
+    console.error("[Plane sync] Failed to create Plane issue:", JSON.stringify(err));
   }
 
   revalidatePath(`/projects/${projectId}`, "page");

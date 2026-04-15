@@ -156,12 +156,13 @@ export async function convertRequestToProject(
   try {
     planeProjectId = await createPlaneProject(
       request.title,
-      newProject.id.slice(0, 8), // use first 8 chars of UUID as identifier seed
+      newProject.id, // full UUID — identifier builder uses last 8 chars
       `${request.title} — Canopy Create`
     );
     await updateProject(workspaceId, newProject.id, { plane_project_id: planeProjectId });
+    console.log(`[Plane sync] Project created: ${planeProjectId} for "${request.title}"`);
   } catch (err) {
-    console.error("[Plane sync] Failed to create Plane project:", err);
+    console.error("[Plane sync] Failed to create Plane project:", JSON.stringify(err));
   }
 
   // Auto-create milestones from template — fire-and-forget (never blocks conversion)
