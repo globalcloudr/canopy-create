@@ -48,6 +48,7 @@ function buildRequestDetails(input: CreateRequestSubmissionInput) {
       };
     case "website_update":
       return {
+        scope: input.scope ?? null,
         target_url: input.targetUrl,
         update_details: input.updateDetails,
         priority: input.priority ?? null,
@@ -148,7 +149,7 @@ export async function convertRequestToProject(
   }
 
   // Resolve template before creating project so we can set template_key
-  const template = resolveTemplate(request.workflow_family, request.request_type);
+  const template = resolveTemplate(request.workflow_family, request.request_type, request.details);
 
   const newProject = await createProject(workspaceId, {
     origin_request_id: request.id,

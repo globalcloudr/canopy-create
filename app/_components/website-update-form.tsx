@@ -24,12 +24,31 @@ import type { RequestFamily, RequestType } from "@/lib/create-request-types";
 
 type WebsiteUpdateField =
   | "title"
+  | "scope"
   | "targetUrl"
   | "updateDetails"
   | "priority"
   | "desiredGoLiveDate";
 
 type WebsiteUpdateErrors = Partial<Record<WebsiteUpdateField, string>>;
+
+const SCOPE_OPTIONS = [
+  {
+    value: "quick_fix",
+    label: "Quick Fix",
+    description: "Typo correction, image swap, contact info update, or any change under an hour. Typically live within 1–2 days.",
+  },
+  {
+    value: "standard_update",
+    label: "Standard Update",
+    description: "New page, navigation change, content section, or feature addition. Typically 5–7 days.",
+  },
+  {
+    value: "website_redesign",
+    label: "Website Redesign",
+    description: "Full site overhaul, new structure, or major visual refresh. Typically 6–8 weeks.",
+  },
+];
 
 const PRIORITY_OPTIONS = [
   { value: "low", label: "Low — no hard deadline" },
@@ -53,6 +72,7 @@ export default function WebsiteUpdateForm({
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(defaultTitle ?? "");
+  const [scope, setScope] = useState<WebsiteUpdateInput["scope"]>(undefined);
   const [targetUrl, setTargetUrl] = useState("");
   const [updateDetails, setUpdateDetails] = useState("");
   const [priority, setPriority] = useState<WebsiteUpdateInput["priority"]>(undefined);
@@ -68,6 +88,7 @@ export default function WebsiteUpdateForm({
       title,
       workflowFamily: "website_update",
       requestType: "website_update",
+      scope,
       targetUrl,
       updateDetails,
       priority,
@@ -128,6 +149,33 @@ export default function WebsiteUpdateForm({
           />
           {errors.title ? (
             <BodyText className="text-sm text-red-600">{errors.title}</BodyText>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Scope</Label>
+          <Select
+            value={scope ?? ""}
+            onValueChange={(v) => setScope(v as WebsiteUpdateInput["scope"] ?? undefined)}
+          >
+            <SelectTrigger className="text-sm">
+              <SelectValue placeholder="What kind of update is this?" />
+            </SelectTrigger>
+            <SelectContent>
+              {SCOPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {scope && (
+            <BodyText muted className="text-xs">
+              {SCOPE_OPTIONS.find((o) => o.value === scope)?.description}
+            </BodyText>
+          )}
+          {errors.scope ? (
+            <BodyText className="text-sm text-red-600">{errors.scope}</BodyText>
           ) : null}
         </div>
 
