@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { uploadVersionAction, submitApprovalAction, markDeliveredAction } from "@/app/items/actions";
 import type { ApprovalDecision } from "@/lib/create-status";
+import ProofViewer from "@/app/_components/proof-viewer";
 
 type Version = {
   id: string;
@@ -231,6 +232,15 @@ export default function ItemVersions({
                       </a>
                     )}
                   </div>
+                  {v.signedUrl && v.filename && (
+                    <div className="mt-2">
+                      <ProofViewer
+                        signedUrl={v.signedUrl}
+                        filename={v.filename}
+                        defaultOpen={false}
+                      />
+                    </div>
+                  )}
                   {vApprovals.length > 0 && (
                     <ul className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">
                       {vApprovals.map((a) => (

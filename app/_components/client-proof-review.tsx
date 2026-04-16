@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitApprovalAction } from "@/app/items/actions";
 import type { ApprovalDecision } from "@/lib/create-status";
+import ProofViewer from "@/app/_components/proof-viewer";
 
 type Version = {
   id: string;
@@ -77,22 +78,29 @@ export default function ClientProofReview({
   if (isDelivered) {
     return (
       <div className="space-y-4">
-        {latestVersion.signedUrl && (
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-            <div>
-              <p className="text-[14px] font-medium text-[var(--foreground)]">
-                {latestVersion.versionLabel}
-              </p>
-              <p className="text-[12px] text-[var(--text-muted)]">{formatDate(latestVersion.createdAt)}</p>
+        {latestVersion.signedUrl && latestVersion.filename && (
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-medium text-[var(--foreground)]">
+                  {latestVersion.versionLabel}
+                </p>
+                <p className="text-[12px] text-[var(--text-muted)]">{formatDate(latestVersion.createdAt)}</p>
+              </div>
+              <a
+                href={latestVersion.signedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
+              >
+                Download
+              </a>
             </div>
-            <a
-              href={latestVersion.signedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
-            >
-              Download
-            </a>
+            <ProofViewer
+              signedUrl={latestVersion.signedUrl}
+              filename={latestVersion.filename}
+              defaultOpen={false}
+            />
           </div>
         )}
         <div className="rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4">
@@ -107,7 +115,7 @@ export default function ClientProofReview({
     const isApproved = existingApproval.decision === "approved" || existingApproval.decision === "approved_with_changes";
     return (
       <div className="space-y-4">
-        {latestVersion.signedUrl && (
+        {latestVersion.signedUrl && latestVersion.filename && (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 space-y-3">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -122,9 +130,14 @@ export default function ClientProofReview({
                 rel="noopener noreferrer"
                 className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
               >
-                View proof
+                Download
               </a>
             </div>
+            <ProofViewer
+              signedUrl={latestVersion.signedUrl}
+              filename={latestVersion.filename}
+              defaultOpen={false}
+            />
             {latestVersion.notes && (
               <div className="border-t border-[var(--border)] pt-3">
                 <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">
@@ -166,8 +179,8 @@ export default function ClientProofReview({
   // Ready to review
   return (
     <div className="space-y-4">
-      {/* Proof download */}
-      {latestVersion.signedUrl && (
+      {/* Inline proof viewer — open by default so the client sees it immediately */}
+      {latestVersion.signedUrl && latestVersion.filename && (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -180,11 +193,16 @@ export default function ClientProofReview({
               href={latestVersion.signedUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 rounded-xl bg-[var(--primary)] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 transition"
+              className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--border)] transition"
             >
-              Open proof
+              Download
             </a>
           </div>
+          <ProofViewer
+            signedUrl={latestVersion.signedUrl}
+            filename={latestVersion.filename}
+            defaultOpen={true}
+          />
           {latestVersion.notes && (
             <div className="border-t border-[var(--border)] pt-3">
               <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">
