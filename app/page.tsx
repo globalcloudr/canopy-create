@@ -157,6 +157,28 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       return "received";
     }
 
+    /** First upcoming incomplete milestone the school can see, ordered by due date. */
+    function nextVisibleMilestone(milestones: Milestone[]): Milestone | null {
+      return (
+        milestones
+          .filter(
+            (m) =>
+              m.visibility === "all" &&
+              m.milestone_status !== "completed" &&
+              m.due_date != null
+          )
+          .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))[0] ??
+        null
+      );
+    }
+
+    /** Days elapsed since the most recent activity on a project (project or any item). */
+    function daysSinceActivity(project: CreateProject, items: CreateItem[]): number {
+      const dates = [project.updated_at, ...items.map((i) => i.updated_at)];
+      const latest = dates.filter(Boolean).sort().at(-1) ?? project.updated_at;
+      return Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000);
+    }
+
     // Unified status label + color for both request and project cards
     const STATUS_LABEL: Record<string, string> = {
       // request statuses
@@ -376,11 +398,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   const stage = projectStage(job.items);
                   const label = STATUS_LABEL[stage] ?? formatLabel(stage);
                   const color = STAGE_COLOR[stage] ?? "text-[var(--text-muted)]";
-                  const completed = job.milestones.filter((m) => m.status === "completed").length;
+                  const completed = job.milestones.filter((m) => m.milestone_status === "completed").length;
                   const total = job.milestones.length;
                   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
                   const typeLabel = formatLabel(job.project.workflow_family);
                   const date = formatDate(job.project.created_at);
+
+                  // Next checkpoint the school is waiting for
+                  const nextMilestone = nextVisibleMilestone(job.milestones);
+
+                  // "Last updated" signal — only shown during production (not review/delivered)
+                  const daysAgo = daysSinceActivity(job.project, job.items);
+                  const showStaleHint = stage === "production" && daysAgo >= 2;
 
                   return (
                     <Link
@@ -410,6 +439,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                               style={{ width: `${pct}%` }}
                             />
                           </div>
+                        )}
+                        {/* Next school-visible checkpoint */}
+                        {nextMilestone?.due_date && stage !== "delivered" && (
+                          <p className="mt-2 text-[11px] text-[var(--text-muted)] truncate">
+                            Next: {nextMilestone.title.length > 38
+                              ? nextMilestone.title.slice(0, 38) + "…"
+                              : nextMilestone.title
+                            } · {formatDate(nextMilestone.due_date)}
+                          </p>
+                        )}
+                        {/* Stale project signal — reassures school work is ongoing */}
+                        {showStaleHint && (
+                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                            {daysAgo === 1
+                              ? "Updated yesterday — still in production"
+                              : `Updated ${daysAgo} days ago — still in production`}
+                          </p>
                         )}
                       </div>
                     </Link>

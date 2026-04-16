@@ -4,6 +4,147 @@ Append new sessions at the top. Do not overwrite history.
 
 ---
 
+## 2026-04-16 — Milestone upgrade, production reminders, proof viewer, scope-aware templates
+
+### Milestone upgrade (Phases 1–4)
+
+**Schema** (`supabase/migrations/20260415000000_milestone_upgrade_and_templates.sql`):
+- Added to `create_milestones`: `due_date`, `assignee_id`, `description`, `visibility` (`all`/`internal`), `milestone_status` (`not_started`/`in_progress`/`completed`/`blocked`)
+- Added to `create_projects`: `cycle_number`, `origin_project_id`
+- New table `create_project_templates` for future per-workspace customization
+
+**Types and data layer**:
+- `lib/create-status.ts` — added `MilestoneStatus`, `MilestoneVisibility`
+- `lib/create-types.ts` — expanded `Milestone`, `CreateProject`; added `CreateProjectTemplate`, `MilestoneDefinition`, `DeliverableDefinition`
+- `lib/create-data.ts` — `createMilestonesBatch`, `updateMilestone` with full payload, `listMilestonesForProjects`
+- `app/projects/actions.ts` — expanded `addMilestoneAction`, added `updateMilestoneAction`
+
+**Template system** (`lib/create-templates.ts`):
+- `DEFAULT_TEMPLATES` — four templates: Catalog Production (57-day, 10 milestones based on Julie Vo / MVLA Adult School schedule), Newsletter (14-day), Website (scope-driven, see below), General Design (23-day, today-forward)
+- `resolveTemplate(workflowFamily, requestType, requestDetails)` — matches by family → request type → scope field in details
+- `resolveStartDate(template, requestDetails)` — smart date anchoring:
+  - Catalogs and newsletters: work backwards from client's delivery/send date so the last milestone lands on the target date
+  - Website standard/redesign: work backwards from go-live date
+  - Website quick fix + all short-form design (banners, flyers, etc.): today-forward
+  - Fallback to today-forward if date is missing or too soon for the full template span
+- `generateMilestonesFromTemplate(definitions, startDate)` — produces `CreateMilestonePayload[]`
+
+**Auto-generation on conversion** (`app/requests/actions.ts`):
+- On `convertRequestToProject`, resolves template + start date and calls `createMilestonesBatch`
+- Milestone steps synced to Plane with "Timeline" label and due dates via `createPlaneIssuesBatch`
+- Fire-and-forget — template failures never block conversion
+
+**Timeline UI** (`app/_components/milestone-timeline.tsx`):
+- Vertical timeline with status icons (○ / ◐ / ✓ / ✕), color coding, overdue indicators
+- Progress bar ("8 of 15 steps complete")
+- `canEdit` prop: inline status dropdowns + date pickers for internal users, read-only for school
+- `app/_components/milestone-add-form.tsx` for inline add (internal only)
+- Timeline tab added to both internal and school project views
+- School view filters to `visibility: "all"` milestones only
+
+---
+
+### Plane enhancements
+
+- `getWorkspaceName(workspaceId)` in `lib/create-data.ts` — resolves school name for Plane project description
+- `app/requests/actions.ts` — embeds `"Client: {name} | {title} — Canopy Create"` in Plane project description
+- `getOrCreatePlaneCustomer`, `linkCustomerToPlaneIssue` in `lib/plane-client.ts` — Business-tier Customers API, fire-and-forget (silently skips on Free tier)
+
+---
+
+### Email notifications (`lib/email-client.ts`, `lib/email-templates.ts`, `lib/create-notifications.ts`)
+
+- Resend integration via `sendEmailSafe` (fire-and-log, never throws)
+- HTML email templates with branded blue-gradient header: proof ready, file delivered, changes requested, catalog kickoff, newsletter content-start, newsletter deadline
+- `notifyProofReady` — fires when item status changes to `in_review`
+- `notifyDelivered` — fires when `markDeliveredAction` runs
+- `notifyChangesRequested` — fires on `changes_requested` approval; sends to `RESEND_NOTIFY_INTERNAL_EMAIL`
+- Env vars required: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_NOTIFY_INTERNAL_EMAIL`
+
+---
+
+### Production subscriptions + recurring reminders (Phase 11)
+
+**Schema** (`supabase/migrations/20260416000001_production_subscriptions.sql`):
+- `create_production_subscriptions` — per-workspace opt-in per cycle type (catalog_fall / catalog_winter_spring / catalog_summer / newsletter_monthly), configurable delivery month/day and kickoff lead days
+- `create_reminder_log` — idempotent cron; UNIQUE(subscription_id, reminder_type, trigger_date) prevents duplicate sends
+
+**Data layer** (`lib/create-subscriptions.ts`):
+- `listWorkspaceSubscriptions`, `upsertSubscription`, `getAllEnabledSubscriptions`
+- `hasReminderBeenSent`, `logReminderSent`
+- `getCatalogKickoffDate` — calculates kickoff date as delivery_date − lead_days
+- `CATALOG_DELIVERY_DEFAULTS`: Fall → August, Winter/Spring → November, Summer → May
+
+**Cron job** (`app/api/cron/production-reminders/route.ts`):
+- Daily at 09:00 via Vercel Cron (`vercel.json`)
+- Authenticated via `Authorization: Bearer {CRON_SECRET}`
+- Newsletter: fires `content_start` reminder on the 15th, `content_deadline` on the 25th
+- Catalog: fires `kickoff` reminder on the computed kickoff date
+- Env var required: `CRON_SECRET`
+
+**Settings UI** (`app/settings/page.tsx`, `app/settings/subscription-settings.tsx`, `app/settings/actions.ts`):
+- Toggle cards for each subscription type
+- Catalog cards: delivery month, delivery day, lead-time selector (6–10 weeks); shows calculated kickoff date live
+- Newsletter card: toggle only
+- Settings nav link added to both `SchoolShell` and `ClientShell`
+
+**Pre-fill flow**:
+- Reminder emails carry `?type=&suggest_title=&suggest_delivery_date=` URL params
+- `app/requests/new/page.tsx` and `client.tsx` read all three params
+- `DesignProjectForm` pre-fills `deliveryDate`; `NewsletterBriefForm` pre-fills `targetSendDate`
+- School can edit all pre-filled values before submitting
+
+**"Start next cycle" button** (`app/_components/start-next-cycle-button.tsx`):
+- Shown on completed/archived projects (internal view, `canManage` only)
+- Links to pre-filled new request form with type + title
+
+**Dashboard production calendar**:
+- `app/page.tsx` — school dashboard shows "Production Calendar" widget when any subscription is enabled
+- Lists upcoming kickoff dates for catalogs and next newsletter reminder date
+
+---
+
+### Website scope field
+
+- Three website templates replacing the single generic one:
+  - **Quick Fix** (2 days, today-forward): typo, image swap, contact info update
+  - **Standard Update** (7 days, backwards from go-live): new page, nav change, content section
+  - **Website Redesign** (45 days, backwards from go-live): full overhaul, 10-milestone pipeline
+- `WebsiteUpdateForm` — new "Scope" dropdown with inline description per option
+- `websiteUpdateSchema` (`lib/create-validators.ts`) — `scope` field added
+- `resolveTemplate` uses `scope` from `request.details` to pick the right template
+
+---
+
+### Inline proof viewer (`app/_components/proof-viewer.tsx`)
+
+- Detects file type from extension: images → `<img>`, PDF → `<iframe>`, other → nothing (caller keeps download link)
+- Loading placeholder and error fallback (download link)
+- `defaultOpen` prop — open by default in school proof review, collapsed toggle in internal version list
+- `ClientProofReview` — viewer open by default in "ready to review" state; collapsed in already-reviewed and delivered states
+- `ItemVersions` — "Preview inline" toggle per version row
+
+---
+
+### "What happens next" messaging on school dashboard
+
+Two signals added to project cards (`app/page.tsx`, school view):
+
+- **Next checkpoint** — finds the first upcoming incomplete milestone with `visibility: "all"` and a due date; displays truncated title + date below the progress bar. School sees what they're waiting for without opening the project.
+- **"Still in production"** hint — if a project is in the production stage and last activity (project or any item `updated_at`) is ≥ 2 days ago, shows "Updated X days ago — still in production". Suppressed once a proof goes up or the job is delivered. Reduces "any update?" emails.
+
+Also fixed project card milestone completion count to use `milestone_status` (not the legacy `status` field).
+
+---
+
+### Deferred / not built
+
+- **Cycle linking**: `cycle_number` and `origin_project_id` columns exist on the schema but are not populated when "Start next cycle" converts to a new project. Future work.
+- **Auto-linked social campaigns**: when a catalog project is created, auto-suggest a companion social campaign 30 days before delivery. Not built.
+- **Portal integration (Phase 14)**: adding Create to the Portal product switcher and a notification badge ("1 proof waiting") on the Portal launcher requires changes to `canopy-platform`. Deferred to the Portal launch sprint — nothing to build in this repo until then.
+
+---
+
 ## 2026-04-14 — Phases 3–7 complete: full production loop is live
 
 ### Phase 3 — Richer intake forms
