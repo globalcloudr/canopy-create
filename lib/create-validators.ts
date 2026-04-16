@@ -30,6 +30,7 @@ export const websiteUpdateSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters."),
   workflowFamily: z.literal("website_update"),
   requestType: z.literal("website_update"),
+  scope: z.enum(["quick_fix", "standard_update", "website_redesign"]).optional(),
   targetUrl: z.string().trim().url("Enter a valid target URL."),
   updateDetails: z
     .string()

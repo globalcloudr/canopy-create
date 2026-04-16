@@ -29,7 +29,7 @@ import {
   getOrCreatePlaneCustomer,
   linkCustomerToPlaneIssue,
 } from "@/lib/plane-client";
-import { resolveTemplate, generateMilestonesFromTemplate } from "@/lib/create-templates";
+import { resolveTemplate, generateMilestonesFromTemplate, resolveStartDate } from "@/lib/create-templates";
 
 export type CreateRequestActionState = {
   error: string | null;
@@ -189,9 +189,10 @@ export async function convertRequestToProject(
   // Auto-create milestones from template — fire-and-forget (never blocks conversion)
   if (template) {
     try {
+      const startDate = resolveStartDate(template, request.details ?? {});
       const milestones = generateMilestonesFromTemplate(
         template.milestone_definitions,
-        new Date()
+        startDate
       );
       await createMilestonesBatch(workspaceId, newProject.id, milestones);
 
