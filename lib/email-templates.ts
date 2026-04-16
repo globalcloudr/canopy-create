@@ -212,6 +212,126 @@ export function changesRequestedEmail(data: ChangesRequestedData): { subject: st
   };
 }
 
+// ─── Catalog kickoff reminder ─────────────────────────────────────────────────
+
+export type CatalogKickoffData = {
+  recipientName: string;
+  catalogName: string;        // e.g. "Fall 2026 Catalog"
+  workspaceName: string;
+  deliveryMonthLabel: string; // e.g. "August"
+  kickoffFormUrl: string;     // pre-filled new request URL
+};
+
+export function catalogKickoffEmail(
+  data: CatalogKickoffData
+): { subject: string; html: string } {
+  const body = `
+    <p style="margin:0 0 6px;font-size:16px;color:#8a8fa8;">Hi ${escapeHtml(data.recipientName)},</p>
+    <h1 style="margin:0 0 20px;font-size:22px;font-weight:700;color:#1a1a2e;line-height:1.3;">
+      Time to kick off your ${escapeHtml(data.catalogName)}
+    </h1>
+
+    <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.6;">
+      Your <strong>${escapeHtml(data.catalogName)}</strong> production cycle is starting up.
+      To hit your <strong>${escapeHtml(data.deliveryMonthLabel)}</strong> delivery target,
+      it's time to start gathering program updates from your coordinators.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;border-radius:8px;padding:16px 20px;margin-bottom:8px;">
+      <tbody>
+        <tr><td style="padding:4px 0;">
+          <span style="font-size:12px;color:#8a8fa8;text-transform:uppercase;letter-spacing:0.05em;">What to do now</span><br/>
+          <span style="font-size:15px;font-weight:600;color:#1a1a2e;">Request program updates from your coordinators</span>
+        </td></tr>
+        <tr><td style="padding:4px 0;">
+          <span style="font-size:12px;color:#8a8fa8;text-transform:uppercase;letter-spacing:0.05em;">Target delivery</span><br/>
+          <span style="font-size:15px;font-weight:600;color:#1a1a2e;">${escapeHtml(data.deliveryMonthLabel)}</span>
+        </td></tr>
+      </tbody>
+    </table>
+
+    ${ctaButton(data.kickoffFormUrl, "Start this catalog →")}
+
+    <p style="margin:28px 0 0;font-size:13px;color:#8a8fa8;line-height:1.6;">
+      The link above opens a pre-filled job request for your ${escapeHtml(data.catalogName)}.
+      Review and update the details, set your target delivery date, then submit — we'll take it from there.
+    </p>
+  `;
+
+  return {
+    subject: `Time to start your ${data.catalogName} — production cycle opening`,
+    html: layout(body),
+  };
+}
+
+// ─── Newsletter content-start reminder (15th of month) ────────────────────────
+
+export type NewsletterReminderData = {
+  recipientName: string;
+  nextMonthName: string;    // e.g. "September"
+  workspaceName: string;
+  kickoffFormUrl: string;
+};
+
+export function newsletterContentStartEmail(
+  data: NewsletterReminderData
+): { subject: string; html: string } {
+  const body = `
+    <p style="margin:0 0 6px;font-size:16px;color:#8a8fa8;">Hi ${escapeHtml(data.recipientName)},</p>
+    <h1 style="margin:0 0 20px;font-size:22px;font-weight:700;color:#1a1a2e;line-height:1.3;">
+      Start gathering content for your ${escapeHtml(data.nextMonthName)} newsletter
+    </h1>
+
+    <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.6;">
+      It's the 15th — time to start pulling together content for your
+      <strong>${escapeHtml(data.nextMonthName)}</strong> newsletter.
+      Collect upcoming events, announcements, and highlights from your team.
+    </p>
+
+    ${ctaButton(data.kickoffFormUrl, "Submit newsletter brief →")}
+
+    <p style="margin:28px 0 0;font-size:13px;color:#8a8fa8;line-height:1.6;">
+      A final reminder will go out on the 25th. Content submitted by then gives us the best chance
+      of delivering your newsletter at the start of ${escapeHtml(data.nextMonthName)}.
+    </p>
+  `;
+
+  return {
+    subject: `Start gathering content for your ${data.nextMonthName} newsletter`,
+    html: layout(body),
+  };
+}
+
+// ─── Newsletter deadline reminder (25th of month) ─────────────────────────────
+
+export function newsletterDeadlineEmail(
+  data: NewsletterReminderData
+): { subject: string; html: string } {
+  const body = `
+    <p style="margin:0 0 6px;font-size:16px;color:#8a8fa8;">Hi ${escapeHtml(data.recipientName)},</p>
+    <h1 style="margin:0 0 20px;font-size:22px;font-weight:700;color:#1a1a2e;line-height:1.3;">
+      Last call — ${escapeHtml(data.nextMonthName)} newsletter content due soon
+    </h1>
+
+    <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.6;">
+      Content for your <strong>${escapeHtml(data.nextMonthName)}</strong> newsletter is due.
+      Submit your brief now so we can hit your target send date.
+    </p>
+
+    ${ctaButton(data.kickoffFormUrl, "Submit newsletter brief →")}
+
+    <p style="margin:28px 0 0;font-size:13px;color:#8a8fa8;line-height:1.6;">
+      If you've already submitted your brief, you're all set — we'll be in touch once the
+      draft is ready for review.
+    </p>
+  `;
+
+  return {
+    subject: `Last call — ${data.nextMonthName} newsletter content due soon`,
+    html: layout(body),
+  };
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function escapeHtml(str: string): string {

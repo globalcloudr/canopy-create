@@ -20,7 +20,12 @@ import {
   proofReadyEmail,
   deliveredEmail,
   changesRequestedEmail,
+  catalogKickoffEmail,
+  newsletterContentStartEmail,
+  newsletterDeadlineEmail,
 } from "@/lib/email-templates";
+import type { ProductionSubscription } from "@/lib/create-subscriptions";
+import { SUBSCRIPTION_LABELS, monthName, nextMonthName } from "@/lib/create-subscriptions";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -236,4 +241,145 @@ export async function notifyChangesRequested(
     { to: [internalEmail], subject, html },
     `changes-requested → ${internalEmail}`
   );
+}
+
+// ─── Production schedule reminders ────────────────────────────────────────────
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://create.canopyschool.us";
+
+function buildKickoffFormUrl(
+  workspaceId: string,
+  requestType: string,
+  suggestedTitle?: string
+): string {
+  const params = new URLSearchParams({
+    workspace: workspaceId,
+    type: requestType,
+  });
+  if (suggestedTitle) params.set("suggest_title", suggestedTitle);
+  return `${APP_URL}/requests/new?${params.toString()}`;
+}
+
+function catalogYearLabel(sub: ProductionSubscription, referenceDate: Date): string {
+  // Determine the year this cycle will deliver in
+  const year = referenceDate.getFullYear();
+  const deliveryMonth = sub.delivery_month ?? 8;
+  const thisYearDelivery = new Date(year, deliveryMonth - 1, sub.delivery_day);
+  const deliveryYear = thisYearDelivery > referenceDate ? year : year + 1;
+
+  const baseLabel = SUBSCRIPTION_LABELS[sub.subscription_type].replace(" Catalog", "");
+  return `${baseLabel} ${deliveryYear} Catalog`;
+}
+
+/**
+ * Sends a catalog kickoff reminder to all school-role members of the workspace.
+ */
+export async function sendCatalogKickoffReminder(
+  sub: ProductionSubscription,
+  referenceDate: Date
+): Promise<void> {
+  let recipients: Recipient[];
+  try {
+    recipients = await getClientRecipients(sub.workspace_id);
+  } catch (err) {
+    console.error("[Notifications] Failed to fetch kickoff recipients:", String(err));
+    return;
+  }
+  if (!recipients.length) return;
+
+  const catalogName = catalogYearLabel(sub, referenceDate);
+  const deliveryMonthLabel = monthName(sub.delivery_month ?? 8);
+  const kickoffFormUrl = buildKickoffFormUrl(
+    sub.workspace_id,
+    "catalog_project",
+    catalogName
+  );
+
+  for (const recipient of recipients) {
+    const { subject, html } = catalogKickoffEmail({
+      recipientName: recipient.name,
+      catalogName,
+      workspaceName: sub.workspace_id, // resolved by recipient fetch — workspace name not in sub
+      deliveryMonthLabel,
+      kickoffFormUrl,
+    });
+    await sendEmailSafe(
+      { to: [recipient.email], subject, html },
+      `catalog-kickoff → ${recipient.email}`
+    );
+  }
+}
+
+/**
+ * Sends a newsletter content-gathering reminder (15th of month) to school members.
+ */
+export async function sendNewsletterContentStartReminder(
+  sub: ProductionSubscription,
+  referenceDate: Date
+): Promise<void> {
+  let recipients: Recipient[];
+  try {
+    recipients = await getClientRecipients(sub.workspace_id);
+  } catch (err) {
+    console.error("[Notifications] Failed to fetch newsletter-start recipients:", String(err));
+    return;
+  }
+  if (!recipients.length) return;
+
+  const next = nextMonthName(referenceDate);
+  const kickoffFormUrl = buildKickoffFormUrl(
+    sub.workspace_id,
+    "newsletter_request",
+    `${next} Newsletter`
+  );
+
+  for (const recipient of recipients) {
+    const { subject, html } = newsletterContentStartEmail({
+      recipientName: recipient.name,
+      nextMonthName: next,
+      workspaceName: sub.workspace_id,
+      kickoffFormUrl,
+    });
+    await sendEmailSafe(
+      { to: [recipient.email], subject, html },
+      `newsletter-start → ${recipient.email}`
+    );
+  }
+}
+
+/**
+ * Sends a newsletter content deadline reminder (25th of month) to school members.
+ */
+export async function sendNewsletterDeadlineReminder(
+  sub: ProductionSubscription,
+  referenceDate: Date
+): Promise<void> {
+  let recipients: Recipient[];
+  try {
+    recipients = await getClientRecipients(sub.workspace_id);
+  } catch (err) {
+    console.error("[Notifications] Failed to fetch newsletter-deadline recipients:", String(err));
+    return;
+  }
+  if (!recipients.length) return;
+
+  const next = nextMonthName(referenceDate);
+  const kickoffFormUrl = buildKickoffFormUrl(
+    sub.workspace_id,
+    "newsletter_request",
+    `${next} Newsletter`
+  );
+
+  for (const recipient of recipients) {
+    const { subject, html } = newsletterDeadlineEmail({
+      recipientName: recipient.name,
+      nextMonthName: next,
+      workspaceName: sub.workspace_id,
+      kickoffFormUrl,
+    });
+    await sendEmailSafe(
+      { to: [recipient.email], subject, html },
+      `newsletter-deadline → ${recipient.email}`
+    );
+  }
 }

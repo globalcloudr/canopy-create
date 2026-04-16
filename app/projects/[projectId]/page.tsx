@@ -23,6 +23,7 @@ import {
 import MilestoneTimeline from "@/app/_components/milestone-timeline";
 import MilestoneAddForm from "@/app/_components/milestone-add-form";
 import DeleteProjectButton from "@/app/_components/delete-project-button";
+import StartNextCycleButton from "@/app/_components/start-next-cycle-button";
 import {
   addItemAction,
   changeProjectStatus,
@@ -557,6 +558,19 @@ export default async function ProjectDetailPage({
                 projectTitle={project.title}
               />
             </div>
+          )}
+
+          {/* Start next cycle — shown on completed/archived projects */}
+          {canManage && (project.status === "completed" || project.status === "archived") && (
+            <StartNextCycleButton
+              workspaceId={workspaceId}
+              requestType={
+                project.workflow_family === "managed_communications"
+                  ? "newsletter_request"
+                  : "catalog_project"
+              }
+              suggestedTitle={project.title}
+            />
           )}
         </div>
 

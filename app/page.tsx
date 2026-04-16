@@ -10,6 +10,14 @@ import {
   listMilestonesForProjects,
   listItemsForProjects,
 } from "@/lib/create-data";
+import {
+  listWorkspaceSubscriptions,
+  getCatalogKickoffDate,
+  SUBSCRIPTION_LABELS,
+  monthName,
+  nextMonthName,
+  type ProductionSubscription,
+} from "@/lib/create-subscriptions";
 import { getServerActionAccess } from "@/lib/server-auth";
 import { isInternalRole, isClientRole } from "@/lib/create-roles";
 import type { CreateItem, CreateProject, CreateRequest, Milestone } from "@/lib/create-types";
@@ -77,9 +85,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const isClient = isClientRole(role) && !isPlatformOperator;
   const isInternal = isInternalRole(role) || isPlatformOperator;
 
-  const [activeProjects, openRequests] = await Promise.all([
+  const [activeProjects, openRequests, subscriptions] = await Promise.all([
     listProjects(workspaceId, [...ACTIVE_PROJECT_STATUSES]),
     listRequests(workspaceId, [...OPEN_REQUEST_STATUSES]),
+    isClient ? listWorkspaceSubscriptions(workspaceId).catch(() => []) : Promise.resolve([]),
   ]);
 
   const projectIds = activeProjects.map((p) => p.id);
@@ -268,6 +277,71 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   })}
                 </div>
               </div>
+            )}
+
+            {/* Production calendar — upcoming reminders */}
+            {subscriptions.filter((s: ProductionSubscription) => s.enabled).length > 0 && (
+              <AppSurface className="px-6 py-5 sm:px-8">
+                <p className="text-[14px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                  Production Calendar
+                </p>
+                <div className="mt-3 space-y-2">
+                  {subscriptions
+                    .filter((s: ProductionSubscription) => s.enabled)
+                    .map((sub: ProductionSubscription) => {
+                      if (sub.subscription_type === "newsletter_monthly") {
+                        const today = new Date();
+                        const dayOfMonth = today.getDate();
+                        const next = nextMonthName(today);
+                        const nextReminder =
+                          dayOfMonth < 15
+                            ? `${monthName(today.getMonth() + 1)} 15 — content gathering`
+                            : dayOfMonth < 25
+                              ? `${monthName(today.getMonth() + 1)} 25 — content deadline`
+                              : `${next} 15 — content gathering`;
+                        return (
+                          <div key={sub.id} className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[13px] text-[var(--text-muted)]">📅</span>
+                              <span className="text-[13px] text-[var(--foreground)]">
+                                Monthly Newsletter
+                              </span>
+                            </div>
+                            <span className="shrink-0 text-[12px] text-[var(--text-muted)]">
+                              Next: {nextReminder}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (!sub.delivery_month) return null;
+                      const kickoff = getCatalogKickoffDate(
+                        sub.delivery_month,
+                        sub.delivery_day,
+                        sub.kickoff_lead_days
+                      );
+                      const kickoffLabel = kickoff.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      });
+                      const deliveryLabel = monthName(sub.delivery_month);
+                      return (
+                        <div key={sub.id} className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[13px] text-[var(--text-muted)]">📅</span>
+                            <span className="text-[13px] text-[var(--foreground)]">
+                              {SUBSCRIPTION_LABELS[sub.subscription_type]}
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-[12px] text-[var(--text-muted)]">
+                            Kickoff {kickoffLabel} · Delivery {deliveryLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </AppSurface>
             )}
 
             {/* Job cards — responsive grid */}

@@ -11,15 +11,35 @@ import NewsletterBriefForm from "@/app/_components/newsletter-brief-form";
 import RequestTypePicker, { type RequestTypeSelection } from "@/app/_components/request-type-picker";
 import SocialRequestForm from "@/app/_components/social-request-form";
 import WebsiteUpdateForm from "@/app/_components/website-update-form";
+import type { RequestFamily, RequestType } from "@/lib/create-request-types";
+
+// Maps a ?type= param to its family + requestType so the type picker can be skipped
+const TYPE_TO_SELECTION: Record<string, RequestTypeSelection> = {
+  catalog_project:       { family: "design_production",       requestType: "catalog_project" },
+  brochure_project:      { family: "design_production",       requestType: "brochure_project" },
+  flyer_project:         { family: "design_production",       requestType: "flyer_project" },
+  postcard_project:      { family: "design_production",       requestType: "postcard_project" },
+  newsletter_request:    { family: "managed_communications",  requestType: "newsletter_request" },
+  social_media_request:  { family: "managed_communications",  requestType: "social_media_request" },
+  website_update:        { family: "website_update",          requestType: "website_update" },
+};
 
 export default function NewRequestClient({
   workspaceId,
   isSchoolUser,
+  preselectedType,
+  suggestedTitle,
 }: {
   workspaceId: string;
   isSchoolUser: boolean;
+  preselectedType?: string | null;
+  suggestedTitle?: string | null;
 }) {
-  const [selection, setSelection] = useState<RequestTypeSelection | null>(null);
+  const initialSelection = preselectedType
+    ? (TYPE_TO_SELECTION[preselectedType] ?? null)
+    : null;
+
+  const [selection, setSelection] = useState<RequestTypeSelection | null>(initialSelection);
 
   const backHref = workspaceId
     ? isSchoolUser
@@ -43,6 +63,7 @@ export default function NewRequestClient({
           family={selection.family}
           requestType={selection.requestType}
           successRedirect={successRedirect}
+          defaultTitle={suggestedTitle ?? undefined}
         />
       );
     }
@@ -53,6 +74,7 @@ export default function NewRequestClient({
           family={selection.family}
           requestType={selection.requestType}
           successRedirect={successRedirect}
+          defaultTitle={suggestedTitle ?? undefined}
         />
       );
     }
@@ -63,6 +85,7 @@ export default function NewRequestClient({
           family={selection.family}
           requestType={selection.requestType}
           successRedirect={successRedirect}
+          defaultTitle={suggestedTitle ?? undefined}
         />
       );
     }
@@ -72,9 +95,10 @@ export default function NewRequestClient({
         family={selection.family}
         requestType={selection.requestType}
         successRedirect={successRedirect}
+        defaultTitle={suggestedTitle ?? undefined}
       />
     );
-  }, [selection, workspaceId, successRedirect]);
+  }, [selection, workspaceId, successRedirect, suggestedTitle]);
 
   const Shell = isSchoolUser ? SchoolShell : ClientShell;
   const activeNav = isSchoolUser ? "home" : "requests";

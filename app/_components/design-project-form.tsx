@@ -54,15 +54,17 @@ export default function DesignProjectForm({
   family,
   requestType,
   successRedirect,
+  defaultTitle,
 }: {
   workspaceId: string;
   family: RequestFamily;
   requestType: RequestType;
   successRedirect: string;
+  defaultTitle?: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(defaultTitle ?? "");
   const [selectedRequestType, setSelectedRequestType] =
     useState<RequestType>(requestType);
   const [description, setDescription] = useState("");

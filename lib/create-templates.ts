@@ -8,24 +8,69 @@ import type { CreateMilestonePayload } from "@/lib/create-data";
 // enables future per-workspace customization without needing template management
 // UI yet.
 
+// Milestones are offset from the content collection date (Day 0 = when school
+// submits program updates). Based on Julie Vo's Mountain View–Los Altos Adult
+// School production schedule — 57-day cycle from content to delivery.
 const CATALOG_PRODUCTION_MILESTONES: MilestoneDefinition[] = [
-  { title: "Notice sent to school contacts", default_offset_days: 0, visibility: "all" },
-  { title: "Content collection begins", default_offset_days: 7, visibility: "all", description: "School sends source documents, text, photos, and reference materials" },
-  { title: "Content collection deadline", default_offset_days: 28, visibility: "all" },
-  { title: "Coordinator reviews content", default_offset_days: 35, visibility: "internal", description: "Review all submitted materials for completeness" },
-  { title: "Admin approval on content", default_offset_days: 42, visibility: "all", description: "School admin reviews and approves content before design begins" },
-  { title: "Handoff to designer", default_offset_days: 44, visibility: "internal" },
-  { title: "Draft 1 — design in progress", default_offset_days: 58, visibility: "internal" },
-  { title: "Draft 1 — internal review", default_offset_days: 62, visibility: "internal", description: "Coordinator reviews draft before sharing with client" },
-  { title: "Draft 1 — client review", default_offset_days: 65, visibility: "all", description: "First proof shared with school for review and markup" },
-  { title: "Revisions round 1", default_offset_days: 72, visibility: "internal" },
-  { title: "Draft 2 — client review", default_offset_days: 79, visibility: "all", description: "Revised proof for final review" },
-  { title: "Final edits", default_offset_days: 84, visibility: "internal" },
-  { title: "Final approval from school", default_offset_days: 88, visibility: "all", description: "School signs off on the final version" },
-  { title: "Files sent to printer", default_offset_days: 90, visibility: "all" },
-  { title: "Proof review from printer", default_offset_days: 95, visibility: "internal", description: "Review printer proof for color and trim accuracy" },
-  { title: "Print production", default_offset_days: 100, visibility: "all" },
-  { title: "Delivery to school", default_offset_days: 114, visibility: "all" },
+  {
+    title: "Program updates due from coordinators",
+    default_offset_days: 0,
+    visibility: "all",
+    description: "School submits course listings, descriptions, and any content changes for this catalog cycle",
+  },
+  {
+    title: "Files handed off to designer",
+    default_offset_days: 7,
+    visibility: "internal",
+    description: "All content packaged and sent to catalog designer",
+  },
+  {
+    title: "Draft 1 — back from designer for school review",
+    default_offset_days: 14,
+    visibility: "all",
+    description: "First catalog draft shared with school contacts for proofing",
+  },
+  {
+    title: "School proofing team completes review",
+    default_offset_days: 18,
+    visibility: "all",
+    description: "School proofing team marks up corrections and returns to Canopy",
+  },
+  {
+    title: "Corrections back to designer",
+    default_offset_days: 20,
+    visibility: "internal",
+    description: "All school corrections compiled and sent to designer for final revision",
+  },
+  {
+    title: "Files sent to printer",
+    default_offset_days: 29,
+    visibility: "all",
+    description: "Print-ready PDF uploaded to printer production portal",
+  },
+  {
+    title: "Hardcopy proof received by school",
+    default_offset_days: 39,
+    visibility: "all",
+    description: "Physical printer proof arrives at school for final sign-off",
+  },
+  {
+    title: "School approves printer proof",
+    default_offset_days: 42,
+    visibility: "all",
+    description: "School returns signed proof approval to printer",
+  },
+  {
+    title: "Final proof confirmed at printer",
+    default_offset_days: 47,
+    visibility: "internal",
+  },
+  {
+    title: "Catalog delivered to school",
+    default_offset_days: 57,
+    visibility: "all",
+    description: "Printed catalogs arrive at school — ready for distribution and registration",
+  },
 ];
 
 const NEWSLETTER_EMAIL_MILESTONES: MilestoneDefinition[] = [

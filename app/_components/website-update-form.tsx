@@ -42,15 +42,17 @@ export default function WebsiteUpdateForm({
   family,
   requestType,
   successRedirect,
+  defaultTitle,
 }: {
   workspaceId: string;
   family: RequestFamily;
   requestType: RequestType;
   successRedirect: string;
+  defaultTitle?: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(defaultTitle ?? "");
   const [targetUrl, setTargetUrl] = useState("");
   const [updateDetails, setUpdateDetails] = useState("");
   const [priority, setPriority] = useState<WebsiteUpdateInput["priority"]>(undefined);

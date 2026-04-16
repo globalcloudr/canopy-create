@@ -1,35 +1,75 @@
-"use client";
+import { Suspense } from "react";
+import { AppSurface, BodyText } from "@canopy/ui";
+import ClientShell from "@/app/_components/client-shell";
+import SchoolShell from "@/app/_components/school-shell";
+import SubscriptionSettings from "./subscription-settings";
+import { getServerActionAccess } from "@/lib/server-auth";
+import { isClientRole } from "@/lib/create-roles";
+import { listWorkspaceSubscriptions } from "@/lib/create-subscriptions";
 
-import { Card, BodyText } from "@canopy/ui";
-import { ProductShell } from "../_components/product-shell";
-import { navItems } from "../nav";
+type SettingsPageProps = {
+  searchParams: Promise<{ workspace?: string | string[] }>;
+};
 
-export default function SettingsPage() {
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+  const params = await searchParams;
+  const workspaceId =
+    typeof params.workspace === "string"
+      ? params.workspace
+      : Array.isArray(params.workspace)
+        ? params.workspace[0] ?? ""
+        : "";
+
+  let isSchoolUser = false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let subscriptions: any[] = [];
+
+  if (workspaceId) {
+    try {
+      const { role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+      isSchoolUser = isClientRole(role) && !isPlatformOperator;
+      subscriptions = await listWorkspaceSubscriptions(workspaceId);
+    } catch {
+      // unauthenticated
+    }
+  }
+
+  const Shell = isSchoolUser ? SchoolShell : ClientShell;
+
   return (
-    <ProductShell activeNav="settings" navItems={navItems}>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <Card padding="md" className="border border-[#dfe7f4] bg-transparent shadow-none sm:p-7">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7f8ea3]">Product state</p>
-          <p className="mt-3 text-[1.2rem] font-semibold tracking-[-0.03em] text-[#172033]">Canopy Create is still in product-definition mode.</p>
-          <p className="mt-3 text-[14px] leading-6 text-[#617286]">
-            The shell, Portal handoff, and workspace session foundation are in place. The next build work is the real Create
-            domain model: requests, projects, milestones, revisions, approvals, and delivery.
+    <Shell activeNav="settings">
+      <div className="space-y-6">
+        <div>
+          <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            Settings
           </p>
-        </Card>
+          <BodyText muted className="mt-0.5">
+            Manage your production schedule and notification preferences.
+          </BodyText>
+        </div>
 
-        <Card padding="md" className="border border-[#dfe7f4] bg-transparent shadow-none sm:p-7">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7f8ea3]">Next implementation areas</p>
-          <ul className="mt-4 space-y-2 text-[14px] leading-6 text-[#5f6f82]">
-            <li>Request intake and service templates</li>
-            <li>Production projects and milestone tracking</li>
-            <li>Proofs, revisions, and approvals</li>
-            <li>PhotoVault asset linking and prior-cycle source handoff</li>
-          </ul>
-          <div className="mt-5">
-            <BodyText muted>See `docs/PRD.md` for the current product definition.</BodyText>
-          </div>
-        </Card>
+        <AppSurface className="px-6 py-6 sm:px-8 sm:py-8">
+          <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+            Production Schedule
+          </p>
+          <BodyText muted className="mt-1 mb-6">
+            Turn on recurring reminders so Canopy can notify you when it&apos;s time to kick off
+            each production cycle. We&apos;ll send an email with a pre-filled link — you confirm
+            the dates before anything is submitted.
+          </BodyText>
+
+          {!workspaceId ? (
+            <BodyText muted>Select a workspace to manage your production schedule.</BodyText>
+          ) : (
+            <Suspense fallback={<div className="text-sm text-[var(--text-muted)]">Loading…</div>}>
+              <SubscriptionSettings
+                workspaceId={workspaceId}
+                initialSubscriptions={subscriptions}
+              />
+            </Suspense>
+          )}
+        </AppSurface>
       </div>
-    </ProductShell>
+    </Shell>
   );
 }

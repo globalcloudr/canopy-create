@@ -51,15 +51,17 @@ export default function SocialRequestForm({
   family,
   requestType,
   successRedirect,
+  defaultTitle,
 }: {
   workspaceId: string;
   family: RequestFamily;
   requestType: RequestType;
   successRedirect: string;
+  defaultTitle?: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(defaultTitle ?? "");
   const [targetPlatforms, setTargetPlatforms] = useState("");
   const [tone, setTone] = useState<SocialRequestInput["tone"]>(undefined);
   const [campaignGoals, setCampaignGoals] = useState("");
