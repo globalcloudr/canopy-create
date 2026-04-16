@@ -5,9 +5,9 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@canopy/ui"],
   experimental: {
     externalDir: true,
-  },
-  serverActions: {
-    bodySizeLimit: "25mb",
+    serverActions: {
+      bodySizeLimit: "25mb",
+    },
   },
 };
 
