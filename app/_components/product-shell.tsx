@@ -47,7 +47,7 @@ const PRODUCT_NAME = "Canopy Create";
 const PRODUCT_COLOR = "#2f76dd"; // matches Canopy Reach and Stories
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PORTAL_URL = process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://usecanopy.school";
+const PORTAL_URL = process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://app.usecanopy.school";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -165,8 +165,8 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
 
   const portalBase = PORTAL_URL.replace(/\/$/, "");
   const portalHomeHref = activeOrg?.slug
-    ? `${portalBase}/app?workspace=${encodeURIComponent(activeOrg.slug)}`
-    : `${portalBase}/app`;
+    ? `${portalBase}/?workspace=${encodeURIComponent(activeOrg.slug)}`
+    : portalBase;
 
   // ── Load launcher products when workspace changes ──────────────────────────
 
