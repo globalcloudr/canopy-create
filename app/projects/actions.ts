@@ -18,6 +18,8 @@ import type { ItemStatus, MilestoneStatus, MilestoneVisibility, ProjectStatus } 
 import { getServerActionAccess } from "@/lib/server-auth";
 import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
 import { createPlaneIssue, getOrCreatePlaneLabel } from "@/lib/plane-client";
+import { getWorkspaceName } from "@/lib/create-data";
+import { notifyProofReady } from "@/lib/create-notifications";
 
 export async function addMilestoneAction(
   workspaceId: string,
@@ -220,6 +222,22 @@ export async function changeItemStatusAction(
     event_type: "item_status_changed",
     metadata: { item_title: item.title, from: fromStatus, to: newStatus },
   });
+
+  // Proof ready — notify school clients when a deliverable enters review
+  if (newStatus === "in_review" && fromStatus !== "in_review") {
+    const [project, workspaceName] = await Promise.all([
+      getProject(workspaceId, projectId),
+      getWorkspaceName(workspaceId),
+    ]);
+    void notifyProofReady({
+      workspaceId,
+      workspaceName,
+      itemId,
+      itemTitle: item.title,
+      projectTitle: project.title,
+      actorUserId: user.id,
+    });
+  }
 
   revalidatePath(`/projects/${projectId}`, "page");
 }

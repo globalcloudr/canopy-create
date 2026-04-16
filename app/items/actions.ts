@@ -7,6 +7,8 @@ import {
   addItemComment,
   createItemVersion,
   getItem,
+  getProject,
+  getWorkspaceName,
   logActivity,
   submitApproval,
   updateItem,
@@ -14,6 +16,10 @@ import {
 import type { ApprovalDecision } from "@/lib/create-status";
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
 import { isInternalRole } from "@/lib/create-roles";
+import {
+  notifyDelivered,
+  notifyChangesRequested,
+} from "@/lib/create-notifications";
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -130,14 +136,32 @@ export async function submitApprovalAction(
     decided_by: user.id,
   });
 
+  const item = await getItem(workspaceId, itemId);
+
   if (projectId) {
-    const item = await getItem(workspaceId, itemId);
     await logActivity(workspaceId, {
       project_id: projectId,
       item_id: itemId,
       actor_user_id: user.id,
       event_type: "item_approved",
       metadata: { item_title: item.title, decision },
+    });
+  }
+
+  // Changes requested — notify the internal team so they know to revise
+  if (decision === "changes_requested" && projectId) {
+    const [project, workspaceName] = await Promise.all([
+      getProject(workspaceId, projectId),
+      getWorkspaceName(workspaceId),
+    ]);
+    void notifyChangesRequested({
+      workspaceId,
+      workspaceName,
+      itemId,
+      itemTitle: item.title,
+      projectTitle: project.title,
+      clientNote: note,
+      actorUserId: user.id,
     });
   }
 
@@ -172,6 +196,22 @@ export async function markDeliveredAction(
       actor_user_id: user.id,
       event_type: "item_delivered",
       metadata: { item_title: item.title },
+    });
+  }
+
+  // File delivered — notify school clients
+  if (projectId) {
+    const [project, workspaceName] = await Promise.all([
+      getProject(workspaceId, projectId),
+      getWorkspaceName(workspaceId),
+    ]);
+    void notifyDelivered({
+      workspaceId,
+      workspaceName,
+      itemId,
+      itemTitle: item.title,
+      projectTitle: project.title,
+      actorUserId: user.id,
     });
   }
 
