@@ -250,14 +250,33 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://create.canopyschool.
 function buildKickoffFormUrl(
   workspaceId: string,
   requestType: string,
-  suggestedTitle?: string
+  suggestedTitle?: string,
+  suggestedDeliveryDate?: string
 ): string {
   const params = new URLSearchParams({
     workspace: workspaceId,
     type: requestType,
   });
   if (suggestedTitle) params.set("suggest_title", suggestedTitle);
+  if (suggestedDeliveryDate) params.set("suggest_delivery_date", suggestedDeliveryDate);
   return `${APP_URL}/requests/new?${params.toString()}`;
+}
+
+/** Returns the YYYY-MM-DD delivery date for a catalog subscription. */
+function computeDeliveryDateStr(sub: ProductionSubscription, referenceDate: Date): string {
+  const year = referenceDate.getFullYear();
+  const deliveryMonth = sub.delivery_month ?? 8;
+  let delivery = new Date(year, deliveryMonth - 1, sub.delivery_day);
+  if (delivery <= referenceDate) {
+    delivery = new Date(year + 1, deliveryMonth - 1, sub.delivery_day);
+  }
+  return delivery.toISOString().split("T")[0];
+}
+
+/** Returns the YYYY-MM-DD of the 1st of next month (newsletter target send date). */
+function computeNextMonthFirstStr(referenceDate: Date): string {
+  const next = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1);
+  return next.toISOString().split("T")[0];
 }
 
 function catalogYearLabel(sub: ProductionSubscription, referenceDate: Date): string {
@@ -289,10 +308,12 @@ export async function sendCatalogKickoffReminder(
 
   const catalogName = catalogYearLabel(sub, referenceDate);
   const deliveryMonthLabel = monthName(sub.delivery_month ?? 8);
+  const deliveryDateStr = computeDeliveryDateStr(sub, referenceDate);
   const kickoffFormUrl = buildKickoffFormUrl(
     sub.workspace_id,
     "catalog_project",
-    catalogName
+    catalogName,
+    deliveryDateStr
   );
 
   for (const recipient of recipients) {
@@ -327,10 +348,12 @@ export async function sendNewsletterContentStartReminder(
   if (!recipients.length) return;
 
   const next = nextMonthName(referenceDate);
+  const nextMonthFirst = computeNextMonthFirstStr(referenceDate);
   const kickoffFormUrl = buildKickoffFormUrl(
     sub.workspace_id,
     "newsletter_request",
-    `${next} Newsletter`
+    `${next} Newsletter`,
+    nextMonthFirst
   );
 
   for (const recipient of recipients) {
@@ -364,10 +387,12 @@ export async function sendNewsletterDeadlineReminder(
   if (!recipients.length) return;
 
   const next = nextMonthName(referenceDate);
+  const nextMonthFirst = computeNextMonthFirstStr(referenceDate);
   const kickoffFormUrl = buildKickoffFormUrl(
     sub.workspace_id,
     "newsletter_request",
-    `${next} Newsletter`
+    `${next} Newsletter`,
+    nextMonthFirst
   );
 
   for (const recipient of recipients) {

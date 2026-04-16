@@ -16,6 +16,7 @@ export default async function NewRequestPage({
     workspace?: string | string[];
     type?: string | string[];
     suggest_title?: string | string[];
+    suggest_delivery_date?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -24,6 +25,8 @@ export default async function NewRequestPage({
   const preselectedType = firstString(params.type) || null;
   // ?suggest_title=Fall+2026+Catalog pre-fills the title field
   const suggestedTitle = firstString(params.suggest_title) || null;
+  // ?suggest_delivery_date=2026-08-01 pre-fills the delivery/send date field
+  const suggestedDeliveryDate = firstString(params.suggest_delivery_date) || null;
 
   let isSchoolUser = false;
   if (workspaceId) {
@@ -42,6 +45,7 @@ export default async function NewRequestPage({
         isSchoolUser={isSchoolUser}
         preselectedType={preselectedType}
         suggestedTitle={suggestedTitle}
+        suggestedDeliveryDate={suggestedDeliveryDate}
       />
     </Suspense>
   );

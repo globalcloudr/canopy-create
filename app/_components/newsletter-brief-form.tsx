@@ -46,19 +46,21 @@ export default function NewsletterBriefForm({
   requestType,
   successRedirect,
   defaultTitle,
+  defaultDeliveryDate,
 }: {
   workspaceId: string;
   family: RequestFamily;
   requestType: RequestType;
   successRedirect: string;
   defaultTitle?: string;
+  defaultDeliveryDate?: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(defaultTitle ?? "");
   const [audienceSegment, setAudienceSegment] =
     useState<NewsletterBriefInput["audienceSegment"]>(undefined);
-  const [targetSendDate, setTargetSendDate] = useState("");
+  const [targetSendDate, setTargetSendDate] = useState(defaultDeliveryDate ?? "");
   const [subjectLineIdea, setSubjectLineIdea] = useState("");
   const [keyTopics, setKeyTopics] = useState("");
   const [featuredEvents, setFeaturedEvents] = useState("");

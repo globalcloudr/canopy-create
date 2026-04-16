@@ -29,11 +29,13 @@ export default function NewRequestClient({
   isSchoolUser,
   preselectedType,
   suggestedTitle,
+  suggestedDeliveryDate,
 }: {
   workspaceId: string;
   isSchoolUser: boolean;
   preselectedType?: string | null;
   suggestedTitle?: string | null;
+  suggestedDeliveryDate?: string | null;
 }) {
   const initialSelection = preselectedType
     ? (TYPE_TO_SELECTION[preselectedType] ?? null)
@@ -64,6 +66,7 @@ export default function NewRequestClient({
           requestType={selection.requestType}
           successRedirect={successRedirect}
           defaultTitle={suggestedTitle ?? undefined}
+          defaultDeliveryDate={suggestedDeliveryDate ?? undefined}
         />
       );
     }
@@ -86,6 +89,7 @@ export default function NewRequestClient({
           requestType={selection.requestType}
           successRedirect={successRedirect}
           defaultTitle={suggestedTitle ?? undefined}
+          defaultDeliveryDate={suggestedDeliveryDate ?? undefined}
         />
       );
     }
@@ -98,7 +102,7 @@ export default function NewRequestClient({
         defaultTitle={suggestedTitle ?? undefined}
       />
     );
-  }, [selection, workspaceId, successRedirect, suggestedTitle]);
+  }, [selection, workspaceId, successRedirect, suggestedTitle, suggestedDeliveryDate]);
 
   const Shell = isSchoolUser ? SchoolShell : ClientShell;
   const activeNav = isSchoolUser ? "home" : "requests";

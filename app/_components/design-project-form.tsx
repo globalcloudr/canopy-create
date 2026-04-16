@@ -55,12 +55,14 @@ export default function DesignProjectForm({
   requestType,
   successRedirect,
   defaultTitle,
+  defaultDeliveryDate,
 }: {
   workspaceId: string;
   family: RequestFamily;
   requestType: RequestType;
   successRedirect: string;
   defaultTitle?: string;
+  defaultDeliveryDate?: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +73,7 @@ export default function DesignProjectForm({
   const [audience, setAudience] = useState("");
   const [format, setFormat] = useState<DesignProjectInput["format"]>(undefined);
   const [quantity, setQuantity] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState(defaultDeliveryDate ?? "");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<DesignProjectErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
