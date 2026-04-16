@@ -44,7 +44,7 @@ import {
 
 // ─── Product identity — update for each new product ──────────────────────────
 const PRODUCT_NAME = "Canopy Create";
-const PRODUCT_COLOR = "#f97316"; // warm creative orange accent for the workspace lockup
+const PRODUCT_COLOR = "#2f76dd"; // matches Canopy Reach and Stories
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PORTAL_URL = process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://usecanopy.school";
@@ -441,10 +441,7 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
                     className="flex w-full items-center gap-4 rounded-[28px] bg-transparent px-6 py-6 text-left transition hover:bg-white/28"
                   >
                     <div
-                      className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[1.05rem] font-semibold tracking-[-0.02em] text-white shadow-[0_10px_24px_rgba(37,99,235,0.24)]"
-                      style={{
-                        background: `linear-gradient(135deg, ${PRODUCT_COLOR} 0%, #1d4ed8 100%)`,
-                      }}
+                      className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(135deg,#2f76dd_0%,#5c96ea_100%)] text-[1.05rem] font-semibold tracking-[-0.02em] text-white shadow-[0_10px_24px_rgba(47,118,221,0.28)]"
                     >
                       {loadingSession ? "…" : orgInitials}
                     </div>
