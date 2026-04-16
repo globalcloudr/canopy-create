@@ -73,6 +73,19 @@ async function resolveWorkspaceId(
   return data.id as string;
 }
 
+export async function getWorkspaceName(workspaceId: string): Promise<string> {
+  const client = getServiceClient();
+  const resolvedId = await resolveWorkspaceId(client, workspaceId);
+
+  const { data } = await client
+    .from("organizations")
+    .select("name, slug")
+    .eq("id", resolvedId)
+    .maybeSingle();
+
+  return data?.name?.trim() || data?.slug?.trim() || "Unknown School";
+}
+
 export async function listRequests(
   workspaceId: string,
   status?: CreateRequest["status"] | CreateRequest["status"][]

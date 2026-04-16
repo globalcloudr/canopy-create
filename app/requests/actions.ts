@@ -11,6 +11,7 @@ import {
   createProject,
   createRequest,
   getRequest,
+  getWorkspaceName,
   updateProject,
   updateRequest,
 } from "@/lib/create-data";
@@ -21,7 +22,13 @@ import {
 } from "@/lib/create-validators";
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
 import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
-import { createPlaneProject, createPlaneIssuesBatch, getOrCreatePlaneLabel } from "@/lib/plane-client";
+import {
+  createPlaneProject,
+  createPlaneIssuesBatch,
+  getOrCreatePlaneLabel,
+  getOrCreatePlaneCustomer,
+  linkCustomerToPlaneIssue,
+} from "@/lib/plane-client";
 import { resolveTemplate, generateMilestonesFromTemplate } from "@/lib/create-templates";
 
 export type CreateRequestActionState = {
@@ -129,7 +136,10 @@ export async function convertRequestToProject(
     throw new Error("You do not have permission to convert requests to projects.");
   }
 
-  const request = await getRequest(workspaceId, requestId);
+  const [request, workspaceName] = await Promise.all([
+    getRequest(workspaceId, requestId),
+    getWorkspaceName(workspaceId),
+  ]);
 
   if (request.status === "converted" && request.converted_project_id) {
     redirect(
@@ -157,12 +167,23 @@ export async function convertRequestToProject(
     planeProjectId = await createPlaneProject(
       request.title,
       newProject.id, // full UUID — identifier builder uses last 8 chars
-      `${request.title} — Canopy Create`
+      `Client: ${workspaceName} | ${request.title} — Canopy Create`
     );
     await updateProject(workspaceId, newProject.id, { plane_project_id: planeProjectId });
-    console.log(`[Plane sync] Project created: ${planeProjectId} for "${request.title}"`);
+    console.log(`[Plane sync] Project created: ${planeProjectId} for "${request.title}" (${workspaceName})`);
   } catch (err) {
     console.error("[Plane sync] Failed to create Plane project:", JSON.stringify(err));
+  }
+
+  // Associate school as a Plane Customer — requires Business tier, fire-and-forget
+  let planeCustomerId: string | null = null;
+  if (planeProjectId) {
+    try {
+      planeCustomerId = await getOrCreatePlaneCustomer(workspaceName);
+      console.log(`[Plane sync] Customer linked: "${workspaceName}" (${planeCustomerId})`);
+    } catch (err) {
+      console.log(`[Plane sync] Customer association skipped (may require Business tier):`, String(err).slice(0, 120));
+    }
   }
 
   // Auto-create milestones from template — fire-and-forget (never blocks conversion)
@@ -189,7 +210,18 @@ export async function convertRequestToProject(
             dueDate: m.due_date ?? undefined,
             labelIds: [timelineLabelId],
           }));
-          await createPlaneIssuesBatch(planeProjectId, planeItems);
+          const createdIssues = await createPlaneIssuesBatch(planeProjectId, planeItems);
+
+          // Link each work item to the school customer (Business tier feature, fire-and-forget)
+          if (planeCustomerId) {
+            for (const issue of createdIssues) {
+              try {
+                await linkCustomerToPlaneIssue(planeCustomerId, planeProjectId, issue.planeIssueId);
+              } catch {
+                // Silently skip — customer linking is best-effort
+              }
+            }
+          }
         } catch (err) {
           console.error("[Plane sync] Failed to create milestone issues:", err);
         }

@@ -247,3 +247,71 @@ export async function listPlaneProjectStates(
 
   return response.results ?? [];
 }
+
+// ─── Customers ────────────────────────────────────────────────────────────────
+
+export type PlaneCustomer = {
+  id: string;
+  name: string;
+  email?: string;
+  website?: string;
+};
+
+/**
+ * Creates a Plane customer (school/client) if one with that name doesn't exist,
+ * or returns the existing customer's ID.
+ *
+ * The Customers feature requires a Business-tier Plane subscription.
+ * This function throws if not available — callers must catch and log.
+ */
+export async function getOrCreatePlaneCustomer(
+  name: string,
+  email?: string,
+  website?: string
+): Promise<string> {
+  const { workspaceSlug } = getConfig();
+
+  // Try creating first
+  try {
+    const customer = await planeRequest<PlaneCustomer>(
+      "POST",
+      `/workspaces/${workspaceSlug}/customers/`,
+      { name, ...(email ? { email } : {}), ...(website ? { website } : {}) }
+    );
+    return customer.id;
+  } catch {
+    // Might already exist — search the list
+    const response = await planeRequest<{ results: PlaneCustomer[] }>(
+      "GET",
+      `/workspaces/${workspaceSlug}/customers/`
+    );
+    const existing = (response.results ?? []).find(
+      (c) => c.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existing) return existing.id;
+    throw new Error(`Failed to create or find Plane customer "${name}"`);
+  }
+}
+
+/**
+ * Links a Plane customer to a specific work item (issue).
+ * Call once per issue if you want the customer visible on each work item.
+ *
+ * Requires Business-tier Plane subscription — callers must wrap in try/catch.
+ */
+export async function linkCustomerToPlaneIssue(
+  customerId: string,
+  planeProjectId: string,
+  planeIssueId: string
+): Promise<void> {
+  const { workspaceSlug } = getConfig();
+
+  await planeRequest(
+    "POST",
+    `/workspaces/${workspaceSlug}/customers/${customerId}/work-items/`,
+    {
+      project_id: planeProjectId,
+      issue_id: planeIssueId,
+    }
+  );
+}
