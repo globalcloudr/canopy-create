@@ -90,6 +90,47 @@ export async function createPlaneProject(
   return project.id;
 }
 
+// ─── Labels ───────────────────────────────────────────────────────────────────
+
+export type PlaneLabel = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+/**
+ * Creates a label in a Plane project. Returns the label ID.
+ * Safe to call even if a label with that name already exists — catches the
+ * duplicate error and fetches the existing one.
+ */
+export async function getOrCreatePlaneLabel(
+  planeProjectId: string,
+  name: string,
+  color: string
+): Promise<string> {
+  const { workspaceSlug } = getConfig();
+
+  try {
+    const label = await planeRequest<PlaneLabel>(
+      "POST",
+      `/workspaces/${workspaceSlug}/projects/${planeProjectId}/labels/`,
+      { name, color }
+    );
+    return label.id;
+  } catch {
+    // Label likely already exists — fetch and find by name
+    const response = await planeRequest<{ results: PlaneLabel[] }>(
+      "GET",
+      `/workspaces/${workspaceSlug}/projects/${planeProjectId}/labels/`
+    );
+    const existing = (response.results ?? []).find(
+      (l) => l.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existing) return existing.id;
+    throw new Error(`Failed to create or find Plane label "${name}"`);
+  }
+}
+
 // ─── Issues ───────────────────────────────────────────────────────────────────
 
 export type PlaneIssue = {
@@ -101,25 +142,39 @@ export type PlaneIssue = {
   sequence_id: number;
 };
 
+export interface CreatePlaneIssueOptions {
+  description?: string;
+  dueDate?: string | null;   // YYYY-MM-DD
+  labelIds?: string[];
+  priority?: "urgent" | "high" | "medium" | "low" | "none";
+}
+
 /**
- * Creates a Plane issue (deliverable) inside a project.
+ * Creates a Plane issue inside a project.
  * Returns the Plane issue ID to store on create_items.plane_issue_id.
  */
 export async function createPlaneIssue(
   planeProjectId: string,
   title: string,
-  description?: string
+  options: CreatePlaneIssueOptions = {}
 ): Promise<string> {
   const { workspaceSlug } = getConfig();
+
+  const body: Record<string, unknown> = {
+    name: title,
+    description_html: options.description
+      ? `<p>${options.description}</p>`
+      : "<p></p>",
+    priority: options.priority ?? "medium",
+  };
+
+  if (options.dueDate) body.due_date = options.dueDate;
+  if (options.labelIds?.length) body.label_ids = options.labelIds;
 
   const issue = await planeRequest<PlaneIssue>(
     "POST",
     `/workspaces/${workspaceSlug}/projects/${planeProjectId}/issues/`,
-    {
-      name: title,
-      description_html: description ? `<p>${description}</p>` : "<p></p>",
-      priority: "medium",
-    }
+    body
   );
 
   return issue.id;
@@ -132,17 +187,17 @@ export async function createPlaneIssue(
  */
 export async function createPlaneIssuesBatch(
   planeProjectId: string,
-  items: { title: string; description?: string }[]
+  items: { title: string; description?: string; dueDate?: string | null; labelIds?: string[] }[]
 ): Promise<{ title: string; planeIssueId: string }[]> {
   const results: { title: string; planeIssueId: string }[] = [];
 
   for (const item of items) {
     try {
-      const issueId = await createPlaneIssue(
-        planeProjectId,
-        item.title,
-        item.description
-      );
+      const issueId = await createPlaneIssue(planeProjectId, item.title, {
+        description: item.description,
+        dueDate: item.dueDate,
+        labelIds: item.labelIds,
+      });
       results.push({ title: item.title, planeIssueId: issueId });
     } catch (err) {
       console.error(`[Plane sync] Failed to create issue "${item.title}":`, err);

@@ -21,7 +21,7 @@ import {
 } from "@/lib/create-validators";
 import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
 import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
-import { createPlaneProject, createPlaneIssuesBatch } from "@/lib/plane-client";
+import { createPlaneProject, createPlaneIssuesBatch, getOrCreatePlaneLabel } from "@/lib/plane-client";
 import { resolveTemplate, generateMilestonesFromTemplate } from "@/lib/create-templates";
 
 export type CreateRequestActionState = {
@@ -174,12 +174,20 @@ export async function convertRequestToProject(
       );
       await createMilestonesBatch(workspaceId, newProject.id, milestones);
 
-      // Sync milestone steps to Plane as work items so designers see them
+      // Sync milestone steps to Plane as work items with Timeline label + due dates
       if (planeProjectId) {
         try {
+          // Create (or reuse) a "Timeline" label — purple to distinguish from deliverables
+          const timelineLabelId = await getOrCreatePlaneLabel(
+            planeProjectId,
+            "Timeline",
+            "#8B5CF6"
+          );
           const planeItems = milestones.map((m) => ({
             title: m.title,
             description: m.description ?? undefined,
+            dueDate: m.due_date ?? undefined,
+            labelIds: [timelineLabelId],
           }));
           await createPlaneIssuesBatch(planeProjectId, planeItems);
         } catch (err) {

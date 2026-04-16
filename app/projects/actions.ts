@@ -17,7 +17,7 @@ import {
 import type { ItemStatus, MilestoneStatus, MilestoneVisibility, ProjectStatus } from "@/lib/create-status";
 import { getServerActionAccess } from "@/lib/server-auth";
 import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
-import { createPlaneIssue } from "@/lib/plane-client";
+import { createPlaneIssue, getOrCreatePlaneLabel } from "@/lib/plane-client";
 
 export async function addMilestoneAction(
   workspaceId: string,
@@ -174,7 +174,15 @@ export async function addItemAction(
   try {
     const project = await getProject(workspaceId, projectId);
     if (project.plane_project_id) {
-      const planeIssueId = await createPlaneIssue(project.plane_project_id, title);
+      const deliverableLabelId = await getOrCreatePlaneLabel(
+        project.plane_project_id,
+        "Deliverable",
+        "#10B981"
+      );
+      const planeIssueId = await createPlaneIssue(project.plane_project_id, title, {
+        priority: "medium",
+        labelIds: [deliverableLabelId],
+      });
       await updateItem(workspaceId, item.id, { plane_issue_id: planeIssueId });
     }
   } catch (err) {
