@@ -4,6 +4,34 @@ Append new sessions at the top. Do not overwrite history.
 
 ---
 
+## 2026-04-20 — Design system alignment pass across all products
+
+All Canopy products (photovault, canopy-stories, canopy-reach, canopy-create, canopy-community, canopy-platform portal) are now fully on the shared `@globalcloudr/canopy-ui` design system.
+
+### Design tokens unified
+- Replaced hardcoded hex colors with CSS design tokens (`--ink`, `--ink-2`, `--faint`, `--text-muted`, `--foreground`, `--surface`, `--surface-muted`, `--accent`, `--rule`, `--border`) across 50+ files
+- Per-product accent classes: `.product-create` following the same pattern as other products
+
+### Product switcher — Canopy Community added to all products
+- Added `community_canopy` to Create's launcher products list
+- Updated `/api/launcher-products` to include Community in entitled products
+- "Canopy Community" now switchable from Create's in-app product dropdown
+- Community marks itself "current" in the switcher
+
+### Shared design components
+- Create shell uses: `AppShellFrame`, `AppShellSidebar`, `AppShellContent`
+- Sidebar uses: `AppSidebarPanel`, `AppSidebarSection`, `sidebarNavItemClass(active)` with `border-l-2` left-border indicators
+- Workspace switcher via `AppWorkspaceSwitcher` matching all other products
+- Core Canopy fonts (Plus Jakarta Sans, Maven Pro, Source Serif 4) owned by `@canopy/ui` via `canopyFontVariables`
+
+### Verification
+- `npm run build` passed
+- Sidebar structure matches other products
+- Product switching functional
+- No regressions in request/project/delivery workflows
+
+---
+
 ## 2026-04-19 — Shared shell frame and app font ownership moved into @canopy/ui
 
 - Updated Create to `@canopy/ui` v0.1.10
