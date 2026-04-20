@@ -1,14 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Maven_Pro } from "next/font/google";
+import { canopyFontVariables } from "@canopy/ui";
 import { Suspense } from "react";
-
-const mavenPro = Maven_Pro({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-maven",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Canopy Product",
@@ -21,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={mavenPro.variable}>
+    <html lang="en" className={canopyFontVariables}>
       <body className="product-create">
         <Suspense>{children}</Suspense>
       </body>
