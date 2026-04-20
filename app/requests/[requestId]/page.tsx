@@ -343,7 +343,7 @@ export default async function RequestDetailPage({
 
           <div className="flex shrink-0 gap-2">
             {isConverted ? (
-              <Button asChild>
+              <Button asChild variant="accent">
                 <Link href={convertedProjectHref}>Open Project</Link>
               </Button>
             ) : canManage ? (
@@ -353,7 +353,7 @@ export default async function RequestDetailPage({
                   await convertRequestToProject(workspaceId, request.id);
                 }}
               >
-                <Button type="submit">Convert to Project</Button>
+                <Button type="submit" variant="accent">Convert to Project</Button>
               </form>
             ) : null}
           </div>

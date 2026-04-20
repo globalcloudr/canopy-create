@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
-import { AppSurface, Badge, BodyText, DashboardHero } from "@globalcloudr/canopy-ui";
+import { AppSurface, Badge, BodyText, Button, DashboardHero } from "@globalcloudr/canopy-ui";
 
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";
@@ -250,12 +250,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <BodyText muted className="mt-1.5 mb-7 max-w-sm mx-auto">
               Submit your first job request and we'll get to work. You can track progress, review proofs, and download final files — all in one place.
             </BodyText>
-            <Link
-              href={newRequestHref}
-              className="inline-flex items-center rounded-2xl bg-[var(--primary)] px-6 py-3 text-[14px] font-semibold text-white transition hover:opacity-90"
-            >
-              Submit a job
-            </Link>
+            <Button variant="accent" asChild>
+              <Link href={newRequestHref}>Submit a job</Link>
+            </Button>
           </AppSurface>
         ) : (
           <div className="space-y-5">
@@ -518,12 +515,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <AppSurface className="px-8 py-14 text-center">
           <p className="text-base font-medium text-[var(--foreground)]">No active work yet</p>
           <BodyText muted className="mt-1 mb-6">Submit the first request to get started.</BodyText>
-          <Link
-            href={newRequestHref}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-[14px] font-medium text-white transition hover:opacity-90"
-          >
-            Submit a request
-          </Link>
+          <Button variant="accent" asChild>
+            <Link href={newRequestHref}>Submit a request</Link>
+          </Button>
         </AppSurface>
       ) : (
         <div className="space-y-5">

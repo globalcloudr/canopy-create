@@ -248,7 +248,7 @@ export default function NewsletterBriefForm({
         ) : null}
 
         <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={isPending || !workspaceId}>
+          <Button type="submit" variant="accent" disabled={isPending || !workspaceId}>
             {isPending ? "Submitting…" : "Submit Request"}
           </Button>
         </div>

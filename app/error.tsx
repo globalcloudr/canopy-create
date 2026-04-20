@@ -28,7 +28,7 @@ export default function Error({
               the latest workspace state.
             </BodyText>
             <div className="mt-6 flex justify-center">
-              <Button type="button" onClick={() => reset()}>
+              <Button type="button" variant="accent" onClick={() => reset()}>
                 Try Again
               </Button>
             </div>

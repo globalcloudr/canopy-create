@@ -74,7 +74,7 @@ export default function LoginPage() {
             <BodyText className="text-sm text-red-600">{error}</BodyText>
           ) : null}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" variant="accent" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
