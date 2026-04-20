@@ -27,7 +27,7 @@ export default function StartNextCycleButton({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-2 rounded-2xl border border-[var(--primary)] px-4 py-2 text-[13px] font-semibold text-[var(--primary)] hover:bg-blue-50 transition"
+      className="inline-flex items-center gap-2 rounded-2xl border border-[var(--primary)] px-4 py-2 text-[13px] font-semibold text-[var(--primary)] hover:bg-[var(--accent-soft)] transition"
     >
       ↻ Start next cycle
     </Link>

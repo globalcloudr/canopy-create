@@ -134,7 +134,7 @@ export default function SubscriptionSettings({
             key={type}
             className={`rounded-2xl border px-5 py-5 transition ${
               state.enabled
-                ? "border-[var(--primary)] bg-blue-50/40"
+                ? "border-[var(--primary)] bg-[var(--accent-soft)]"
                 : "border-[var(--border)] bg-[var(--surface)]"
             }`}
           >
@@ -266,7 +266,7 @@ export default function SubscriptionSettings({
           <div
             className={`rounded-2xl border px-5 py-5 transition ${
               state.enabled
-                ? "border-[var(--primary)] bg-blue-50/40"
+                ? "border-[var(--primary)] bg-[var(--accent-soft)]"
                 : "border-[var(--border)] bg-[var(--surface)]"
             }`}
           >
@@ -301,11 +301,11 @@ export default function SubscriptionSettings({
             {state.enabled && (
               <div className="mt-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] px-4 py-3 space-y-1.5">
                 <div className="flex items-center gap-2 text-[13px] text-[var(--foreground)]">
-                  <span className="text-blue-500">●</span>
+                  <span className="text-[var(--accent)]">●</span>
                   <span><strong>15th of the month</strong> — "Time to start gathering content for [Month]'s newsletter"</span>
                 </div>
                 <div className="flex items-center gap-2 text-[13px] text-[var(--foreground)]">
-                  <span className="text-amber-500">●</span>
+                  <span className="text-[var(--warning)]">●</span>
                   <span><strong>25th of the month</strong> — "Last call — [Month] newsletter content due soon"</span>
                 </div>
               </div>
