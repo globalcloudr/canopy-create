@@ -188,7 +188,8 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
             v === "photovault" ||
             v === "stories_canopy" ||
             v === "reach_canopy" ||
-            v === "create_canopy"
+            v === "create_canopy" ||
+            v === "community_canopy"
           )
         );
       } catch {
@@ -377,9 +378,7 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
     ...(launcherProductKeys.includes("reach_canopy")
       ? [{ key: "reach_canopy", label: "Canopy Reach", productKey: "reach_canopy" as const }]
       : []),
-    ...(launcherProductKeys.includes("create_canopy")
-      ? [{ key: "create_canopy", label: "Canopy Create", href: "/", current: true as const }]
-      : []),
+    { key: "create_canopy", label: "Canopy Create", href: "/", current: true as const },
     ...(launcherProductKeys.includes("community_canopy")
       ? [{ key: "community_canopy", label: "Canopy Community", productKey: "community_canopy" as const }]
       : []),
