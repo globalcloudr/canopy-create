@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
-import { AppSurface, Badge, BodyText } from "@globalcloudr/canopy-ui";
+import { AppSurface, Badge, BodyText, DashboardHero } from "@globalcloudr/canopy-ui";
 
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";
@@ -236,22 +236,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <SchoolShell activeNav="home">
         <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
-              My Work
-            </p>
-            <BodyText muted className="mt-0.5">
-              {isEmpty ? "You have no active jobs." : `${jobs.length} active job${jobs.length === 1 ? "" : "s"}`}
-            </BodyText>
-          </div>
-          <Link
-            href={newRequestHref}
-            className="shrink-0 inline-flex items-center rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-[14px] font-medium text-white transition hover:opacity-90"
-          >
-            + New Job
-          </Link>
-        </div>
+        <DashboardHero
+          eyebrow="Canopy Create"
+          headline="My Work"
+          subheading={isEmpty ? "You have no active jobs." : `${jobs.length} active job${jobs.length === 1 ? "" : "s"}`}
+          ctaLabel="New Job"
+          ctaHref={newRequestHref}
+        />
 
         {isEmpty ? (
           <AppSurface className="px-8 py-16 text-center">
@@ -515,25 +506,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // ─── Internal dashboard ───────────────────────────────────────────────────────
   return (
     <ClientShell activeNav="home">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
-            Overview
-          </p>
-          {workspaceId && (
-            <BodyText muted className="mt-0.5">
-              {openRequests.length} open {openRequests.length === 1 ? "request" : "requests"},{" "}
-              {activeProjects.length} active {activeProjects.length === 1 ? "project" : "projects"}
-            </BodyText>
-          )}
-        </div>
-        <Link
-          href={newRequestHref}
-          className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-[14px] font-medium text-white transition hover:opacity-90"
-        >
-          New Request
-        </Link>
-      </div>
+      <DashboardHero
+        eyebrow="Canopy Create"
+        headline="Overview"
+        subheading={workspaceId ? `${openRequests.length} open ${openRequests.length === 1 ? "request" : "requests"}, ${activeProjects.length} active ${activeProjects.length === 1 ? "project" : "projects"}` : undefined}
+        ctaLabel="New Request"
+        ctaHref={newRequestHref}
+      />
 
       {openRequests.length === 0 && activeProjects.length === 0 ? (
         <AppSurface className="px-8 py-14 text-center">
