@@ -59,7 +59,8 @@ type LauncherProductKey =
   | "photovault"
   | "stories_canopy"
   | "reach_canopy"
-  | "create_canopy";
+  | "create_canopy"
+  | "community_canopy";
 
 type AppSessionPayload = {
   user: { id: string; email: string; displayName: string };
@@ -378,6 +379,9 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
       : []),
     ...(launcherProductKeys.includes("create_canopy")
       ? [{ key: "create_canopy", label: "Canopy Create", href: "/", current: true as const }]
+      : []),
+    ...(launcherProductKeys.includes("community_canopy")
+      ? [{ key: "community_canopy", label: "Canopy Community", productKey: "community_canopy" as const }]
       : []),
     { key: "portal", label: "Canopy Portal", portal: true as const },
   ];

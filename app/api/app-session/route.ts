@@ -154,7 +154,7 @@ export async function GET(request: Request) {
     }
 
     const workspaces = rows
-      .filter((row) => row.id && (!requireProductEntitlement || enabledWorkspaceIds.has(row.id)))
+      .filter((row) => row.id && (access.isPlatformOperator || !requireProductEntitlement || enabledWorkspaceIds.has(row.id)))
       .map((row) => ({
         id: row.id,
         name: row.name?.trim() || row.slug?.trim() || "Workspace",
