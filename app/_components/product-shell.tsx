@@ -5,6 +5,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  AppShellContent,
+  AppShellFrame,
+  AppShellSidebar,
   AppSidebarPanel,
   AppSidebarPanelBody,
   AppSidebarSection,
@@ -413,10 +416,8 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
       />
 
       {/* Main layout */}
-      <div className="md:grid md:h-[calc(100vh-3.5rem)] md:grid-cols-[280px_minmax(0,1fr)]">
-
-        {/* Sidebar */}
-        <aside className="hidden border-r border-[var(--app-divider)] bg-transparent md:block">
+      <AppShellFrame>
+        <AppShellSidebar>
           <div className="flex h-full flex-col">
 
             {/* Workspace lockup */}
@@ -494,15 +495,12 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
               </AppSidebarPanelBody>
             </AppSidebarPanel>
           </div>
-        </aside>
+        </AppShellSidebar>
 
-        {/* Content */}
-        <div className="min-w-0 overflow-y-auto bg-[var(--app-content-bg)]">
-          <div className="mx-auto flex min-h-full w-full max-w-[1340px] flex-col gap-6 px-4 py-6 sm:px-6">
-            {children}
-          </div>
-        </div>
-      </div>
+        <AppShellContent>
+          {children}
+        </AppShellContent>
+      </AppShellFrame>
     </main>
   );
 }
