@@ -94,7 +94,7 @@ export default async function ProjectsPage({
             <Button
               key={tab.value}
               asChild
-              variant={currentFilter === tab.value ? "primary" : "secondary"}
+              variant={currentFilter === tab.value ? "accent" : "secondary"}
             >
               <Link href={`${baseHref}&filter=${tab.value}`}>{tab.label}</Link>
             </Button>

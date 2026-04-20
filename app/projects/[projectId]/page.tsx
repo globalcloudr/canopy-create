@@ -545,7 +545,7 @@ export default async function ProjectDetailPage({
                   <form key={value} action={action}>
                     <Button
                       type="submit"
-                      variant={project.status === value ? "primary" : "secondary"}
+                      variant={project.status === value ? "accent" : "secondary"}
                     >
                       {label}
                     </Button>

@@ -87,7 +87,7 @@ export default async function RequestsPage({
               delivery.
             </BodyText>
           </div>
-          <Button asChild>
+          <Button asChild variant="accent">
             <Link href={newRequestHref}>New Request</Link>
           </Button>
         </div>
@@ -95,13 +95,13 @@ export default async function RequestsPage({
         <div className="mt-5 flex gap-1">
           <Button
             asChild
-            variant={currentFilter === "active" ? "primary" : "secondary"}
+            variant={currentFilter === "active" ? "accent" : "secondary"}
           >
             <Link href={activeHref}>Active</Link>
           </Button>
           <Button
             asChild
-            variant={currentFilter === "all" ? "primary" : "secondary"}
+            variant={currentFilter === "all" ? "accent" : "secondary"}
           >
             <Link href={allHref}>All</Link>
           </Button>
