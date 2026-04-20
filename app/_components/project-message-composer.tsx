@@ -33,7 +33,7 @@ export default function ProjectMessageComposer({
         className="w-full resize-none rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[14px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
       />
       <div className="mt-2 flex justify-end">
-        <Button type="submit" variant="primary" disabled={isPending}>
+        <Button type="submit" variant="accent" disabled={isPending}>
           {isPending ? "Posting..." : "Post"}
         </Button>
       </div>

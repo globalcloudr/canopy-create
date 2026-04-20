@@ -78,7 +78,7 @@ export default function MilestoneAddForm({
         className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-[13px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] resize-none"
       />
       <div className="flex gap-2">
-        <Button type="submit" variant="primary" disabled={isPending}>
+        <Button type="submit" variant="accent" disabled={isPending}>
           {isPending ? "Adding..." : "Add step"}
         </Button>
         <Button
