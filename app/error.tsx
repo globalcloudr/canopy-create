@@ -7,7 +7,7 @@ import {
   Card,
   CardContent,
   CardTitle,
-} from "@canopy/ui";
+} from "@globalcloudr/canopy-ui";
 
 export default function Error({
   reset,

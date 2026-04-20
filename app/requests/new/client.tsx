@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AppSurface, BodyText, Button, SectionTitle } from "@canopy/ui";
+import { AppSurface, BodyText, Button, SectionTitle } from "@globalcloudr/canopy-ui";
 
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from "@canopy/ui";
+} from "@globalcloudr/canopy-ui";
 
 import { submitCreateRequestAction, uploadAttachmentAction } from "@/app/requests/actions";
 import {

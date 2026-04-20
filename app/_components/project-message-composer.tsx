@@ -2,7 +2,7 @@
 
 import { useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@canopy/ui";
+import { Button } from "@globalcloudr/canopy-ui";
 
 import { addProjectMessageAction } from "@/app/projects/actions";
 

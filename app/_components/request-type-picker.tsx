@@ -5,7 +5,7 @@ import {
   Card,
   CardContent,
   CardTitle,
-} from "@canopy/ui";
+} from "@globalcloudr/canopy-ui";
 
 import type { RequestFamily, RequestType } from "@/lib/create-request-types";
 

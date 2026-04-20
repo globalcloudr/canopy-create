@@ -1,4 +1,4 @@
-import { AppSurface } from "@canopy/ui";
+import { AppSurface } from "@globalcloudr/canopy-ui";
 
 function briefLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

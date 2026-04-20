@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@canopy/ui";
+import { Button } from "@globalcloudr/canopy-ui";
 
 import { deleteProjectAction } from "@/app/projects/actions";
 

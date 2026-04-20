@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input } from "@canopy/ui";
+import { Button, Input } from "@globalcloudr/canopy-ui";
 
 import { addMilestoneAction } from "@/app/projects/actions";
 

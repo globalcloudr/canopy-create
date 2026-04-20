@@ -1,8 +1,8 @@
 @import "tailwindcss";
-@source "../node_modules/@canopy/ui";
+@source "../node_modules/@globalcloudr/canopy-ui";
 
 /* Preserve any existing CSS variables or base layer styles you see in the file below here */
-@import "@canopy/ui/styles.css";
+@import "@globalcloudr/canopy-ui/styles.css";
 
 a {
   color: inherit;

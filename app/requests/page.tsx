@@ -5,7 +5,7 @@ import {
   BodyText,
   Button,
   SectionTitle,
-} from "@canopy/ui";
+} from "@globalcloudr/canopy-ui";
 
 import ClientShell from "@/app/_components/client-shell";
 import { listRequests } from "@/lib/create-data";

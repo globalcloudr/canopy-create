@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BodyText, Button } from "@canopy/ui";
+import { BodyText, Button } from "@globalcloudr/canopy-ui";
 import {
   type ProductionSubscription,
   type SubscriptionType,

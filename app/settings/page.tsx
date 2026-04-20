@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AppSurface, BodyText } from "@canopy/ui";
+import { AppSurface, BodyText } from "@globalcloudr/canopy-ui";
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";
 import SubscriptionSettings from "./subscription-settings";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BodyText, Button, Input, Label } from "@canopy/ui";
+import { BodyText, Button, Input, Label } from "@globalcloudr/canopy-ui";
 import { getSupabaseClient } from "@/lib/supabase-client";
 
 export default function LoginPage() {

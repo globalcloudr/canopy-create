@@ -1,4 +1,4 @@
-import { AppSurface } from "@canopy/ui";
+import { AppSurface } from "@globalcloudr/canopy-ui";
 import type { CreateItem, CreateRequestAttachment } from "@/lib/create-types";
 
 interface VersionWithUrl {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
-import { AppSurface, Badge } from "@canopy/ui";
+import { AppSurface, Badge } from "@globalcloudr/canopy-ui";
 
 import ClientShell from "@/app/_components/client-shell";
 import SchoolShell from "@/app/_components/school-shell";

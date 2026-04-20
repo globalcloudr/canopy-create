@@ -62,6 +62,7 @@ Recurring workflows (catalogs, annual reports) are a first-class requirement —
 ### Completed
 
 - Next.js 16 / React 19 / TypeScript / Tailwind v4 app shell
+- `@canopy/ui` v0.1.10 vendored locally for shared shell, typography, and core app font ownership
 - Portal handoff exchange and workspace-backed product session
 - Overview dashboard with actionable summaries (client review queue, open requests, active projects)
 - Login page for direct-access flows
@@ -93,6 +94,8 @@ Recurring workflows (catalogs, annual reports) are a first-class requirement —
   - `canUpdateDeliverables`: item status changes
   - Internal-only: upload proof versions, toggle milestones
   - Client-accessible: submit approvals, post comments, upload attachments
+- Outer shell frame now comes from `@canopy/ui` (`AppShellFrame`, `AppShellSidebar`, `AppShellContent`)
+- Core Canopy app fonts are now loaded from `@canopy/ui` via `canopyFontVariables`
 
 ### Data Model
 

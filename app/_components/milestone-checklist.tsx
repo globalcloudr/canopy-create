@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BodyText } from "@canopy/ui";
+import { BodyText } from "@globalcloudr/canopy-ui";
 
 import { toggleMilestoneStatusAction } from "@/app/projects/actions";
 import type { Milestone } from "@/lib/create-types";

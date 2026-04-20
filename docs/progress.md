@@ -4,6 +4,21 @@ Append new sessions at the top. Do not overwrite history.
 
 ---
 
+## 2026-04-19 — Shared shell frame and app font ownership moved into @canopy/ui
+
+- Updated Create to `@canopy/ui` v0.1.10
+- Replaced the repo-local outer shell frame with shared `@canopy/ui` primitives:
+  - `AppShellFrame`
+  - `AppShellSidebar`
+  - `AppShellContent`
+- Removed local Canopy app font loading from `app/layout.tsx`
+- Create now imports `canopyFontVariables` from `@canopy/ui`, so the core app font stack is owned by the shared package
+
+### Verification
+
+- `npm run build` passed
+- `package-lock.json` now resolves `@canopy/ui` to `vendor/canopy-ui-0.1.10.tgz`
+
 ## 2026-04-16 — Milestone upgrade, production reminders, proof viewer, scope-aware templates
 
 ### Milestone upgrade (Phases 1–4)
