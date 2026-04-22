@@ -500,7 +500,7 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
           </div>
         </AppShellSidebar>
 
-        <AppShellContent>
+        <AppShellContent containerClassName="px-6 py-8 sm:px-8 lg:px-10">
           {children}
         </AppShellContent>
       </AppShellFrame>
