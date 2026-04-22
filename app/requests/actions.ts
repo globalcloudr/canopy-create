@@ -111,7 +111,9 @@ export async function submitCreateRequestAction(
     product_key:  "create_canopy",
     event_type:   "in_progress",
     title:        request.title,
-    description:  request.request_type ?? null,
+    description:  request.request_type
+      ? request.request_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Design request submitted",
     event_url:    `/auth/launch/create?path=/requests/${request.id}`,
   });
 

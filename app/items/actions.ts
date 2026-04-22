@@ -205,6 +205,9 @@ export async function markDeliveredAction(
     product_key:  "create_canopy",
     event_type:   "deliverable_ready",
     title:        item.title,
+    description:  item.item_type
+      ? `${item.item_type.replace(/_/g, " ")} — ready for download`
+      : "Deliverable ready for download",
     event_url:    `/auth/launch/create?path=/items/${itemId}`,
   });
 
