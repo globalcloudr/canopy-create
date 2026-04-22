@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
+import { logPortalActivity } from "@/lib/portal-activity";
 
 import {
   addItemComment,
@@ -198,6 +199,14 @@ export async function markDeliveredAction(
       metadata: { item_title: item.title },
     });
   }
+
+  void logPortalActivity({
+    workspace_id: workspaceId,
+    product_key:  "create_canopy",
+    event_type:   "deliverable_ready",
+    title:        item.title,
+    event_url:    `/auth/launch/create?path=/items/${itemId}`,
+  });
 
   // File delivered — notify school clients
   if (projectId) {

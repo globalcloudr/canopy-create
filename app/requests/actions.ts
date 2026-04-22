@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { revalidatePath } from "next/cache";
+import { logPortalActivity } from "@/lib/portal-activity";
 import { createClient } from "@supabase/supabase-js";
 
 import {
@@ -103,6 +104,15 @@ export async function submitCreateRequestAction(
     assigned_to_user_id: null,
     converted_project_id: null,
     converted_item_id: null,
+  });
+
+  void logPortalActivity({
+    workspace_id: workspaceId,
+    product_key:  "create_canopy",
+    event_type:   "in_progress",
+    title:        request.title,
+    description:  request.request_type ?? null,
+    event_url:    `/auth/launch/create?path=/requests/${request.id}`,
   });
 
   return { error: null, requestId: request.id };
