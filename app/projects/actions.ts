@@ -9,6 +9,7 @@ import {
   deleteProject,
   getItem,
   getProject,
+  listMilestones,
   logActivity,
   updateItem,
   updateMilestone,
@@ -20,6 +21,88 @@ import { canManageProjects, canUpdateDeliverables } from "@/lib/create-roles";
 import { createPlaneIssue, getOrCreatePlaneLabel } from "@/lib/plane-client";
 import { getWorkspaceName } from "@/lib/create-data";
 import { notifyProofReady } from "@/lib/create-notifications";
+import {
+  createProjectEventUrl,
+  logPortalActivity,
+  removePortalActivityByUrl,
+  upsertPortalProjectActivity,
+} from "@/lib/portal-activity";
+
+function humanizeWorkflowFamily(family: string | null | undefined): string {
+  if (!family) return "Create project";
+  switch (family) {
+    case "design_production":
+      return "Design Production";
+    case "website_update":
+      return "Website Update";
+    case "managed_communications":
+      return "Managed Communications";
+    default:
+      return family.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
+/**
+ * Refresh the Portal nerve-center row for a given Create project. Reads
+ * current project + milestone counts and writes a single in-progress row
+ * with the updated step metric. Fire-and-forget — never throws.
+ */
+async function refreshProjectPortalActivity(
+  workspaceId: string,
+  projectId: string
+): Promise<void> {
+  try {
+    const [project, milestones] = await Promise.all([
+      getProject(workspaceId, projectId),
+      listMilestones(workspaceId, projectId),
+    ]);
+
+    const projectEventUrl = createProjectEventUrl(projectId);
+
+    // Archived or completed projects should not appear in the in-progress bucket.
+    if (project.status === "archived") {
+      void removePortalActivityByUrl(workspaceId, projectEventUrl);
+      return;
+    }
+
+    if (project.status === "completed") {
+      void removePortalActivityByUrl(workspaceId, projectEventUrl);
+      void logPortalActivity({
+        workspace_id: workspaceId,
+        product_key: "create_canopy",
+        event_type: "completed",
+        title: project.title,
+        description: `${humanizeWorkflowFamily(project.workflow_family)} · Project completed`,
+        event_url: projectEventUrl,
+      });
+      return;
+    }
+
+    const total = milestones.length;
+    const done = milestones.filter(
+      (m) => m.milestone_status === "completed" || m.status === "completed"
+    ).length;
+
+    const metric = total > 0 ? `${done} of ${total} steps` : null;
+    const descriptionParts = [humanizeWorkflowFamily(project.workflow_family)];
+    if (metric) descriptionParts.push(metric);
+
+    void upsertPortalProjectActivity(
+      {
+        workspace_id: workspaceId,
+        product_key: "create_canopy",
+        event_type: "in_progress",
+        title: project.title,
+        description: descriptionParts.join(" · "),
+        metric,
+        event_url: projectEventUrl,
+      },
+      projectEventUrl
+    );
+  } catch (err) {
+    console.error("[portal-activity] refreshProjectPortalActivity error:", err);
+  }
+}
 
 export async function addMilestoneAction(
   workspaceId: string,
@@ -61,6 +144,8 @@ export async function addMilestoneAction(
     metadata: { title, milestone_id: milestone.id },
   });
 
+  await refreshProjectPortalActivity(workspaceId, projectId);
+
   redirect(`/projects/${projectId}?workspace=${encodeURIComponent(workspaceId)}`);
 }
 
@@ -94,6 +179,8 @@ export async function toggleMilestoneStatusAction(
     event_type: newStatus === "completed" ? "milestone_completed" : "milestone_uncompleted",
     metadata: { title: milestoneTitle },
   });
+
+  await refreshProjectPortalActivity(workspaceId, projectId);
 
   revalidatePath(`/projects/${projectId}`, "page");
 }
@@ -130,6 +217,8 @@ export async function changeProjectStatus(
     event_type: "project_status_changed",
     metadata: { from: project.status, to: newStatus },
   });
+
+  await refreshProjectPortalActivity(workspaceId, projectId);
 
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}?workspace=${encodeURIComponent(workspaceId)}`);
@@ -294,6 +383,8 @@ export async function updateMilestoneAction(
     metadata: { milestone_id: milestoneId, changes: Object.keys(payload) },
   });
 
+  await refreshProjectPortalActivity(workspaceId, projectId);
+
   revalidatePath(`/projects/${projectId}`, "page");
 }
 
@@ -332,6 +423,8 @@ export async function deleteProjectAction(
   }
 
   await deleteProject(workspaceId, projectId);
+
+  void removePortalActivityByUrl(workspaceId, createProjectEventUrl(projectId));
 
   redirect(`/projects?workspace=${encodeURIComponent(workspaceId)}`);
 }

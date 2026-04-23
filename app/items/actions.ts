@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { logPortalActivity } from "@/lib/portal-activity";
+import { createItemEventUrl, logPortalActivity } from "@/lib/portal-activity";
 
 import {
   addItemComment,
@@ -208,7 +208,7 @@ export async function markDeliveredAction(
     description:  item.item_type
       ? `${item.item_type.replace(/_/g, " ")} — ready for download`
       : "Deliverable ready for download",
-    event_url:    `/auth/launch/create?path=/items/${itemId}`,
+    event_url: createItemEventUrl(itemId),
   });
 
   // File delivered — notify school clients

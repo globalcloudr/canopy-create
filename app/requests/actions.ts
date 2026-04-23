@@ -3,7 +3,13 @@
 import { redirect } from "next/navigation";
 
 import { revalidatePath } from "next/cache";
-import { logPortalActivity } from "@/lib/portal-activity";
+import {
+  createProjectEventUrl,
+  createRequestEventUrl,
+  logPortalActivity,
+  removePortalActivityByUrl,
+  upsertPortalProjectActivity,
+} from "@/lib/portal-activity";
 import { createClient } from "@supabase/supabase-js";
 
 import {
@@ -31,6 +37,20 @@ import {
   linkCustomerToPlaneIssue,
 } from "@/lib/plane-client";
 import { resolveTemplate, generateMilestonesFromTemplate, resolveStartDate } from "@/lib/create-templates";
+
+function humanizeWorkflowFamily(family: string | null | undefined): string {
+  if (!family) return "Create project";
+  switch (family) {
+    case "design_production":
+      return "Design Production";
+    case "website_update":
+      return "Website Update";
+    case "managed_communications":
+      return "Managed Communications";
+    default:
+      return family.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
 
 export type CreateRequestActionState = {
   error: string | null;
@@ -108,13 +128,11 @@ export async function submitCreateRequestAction(
 
   void logPortalActivity({
     workspace_id: workspaceId,
-    product_key:  "create_canopy",
-    event_type:   "in_progress",
-    title:        request.title,
-    description:  request.request_type
-      ? request.request_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-      : "Design request submitted",
-    event_url:    `/auth/launch/create?path=/requests/${request.id}`,
+    product_key: "create_canopy",
+    event_type: "in_progress",
+    title: request.title,
+    description: `${humanizeWorkflowFamily(request.workflow_family)} · Request submitted`,
+    event_url: createRequestEventUrl(request.id),
   });
 
   return { error: null, requestId: request.id };
@@ -249,6 +267,21 @@ export async function convertRequestToProject(
     status: "converted",
     converted_project_id: newProject.id,
   });
+
+  // Portal nerve center — swap the request's in-progress row for the project's.
+  const projectEventUrl = createProjectEventUrl(newProject.id);
+  void removePortalActivityByUrl(workspaceId, createRequestEventUrl(request.id));
+  void upsertPortalProjectActivity(
+    {
+      workspace_id: workspaceId,
+      product_key: "create_canopy",
+      event_type: "in_progress",
+      title: newProject.title,
+      description: `${humanizeWorkflowFamily(newProject.workflow_family)} · Project kicked off`,
+      event_url: projectEventUrl,
+    },
+    projectEventUrl
+  );
 
   redirect(`/projects/${newProject.id}?workspace=${encodeURIComponent(workspaceId)}`);
 }
