@@ -23,9 +23,9 @@ All repos share one Supabase project.
 
 ## Tech Stack
 
-- **Framework**: Next.js 16, React 19, TypeScript, Node 20 (pinned via `.nvmrc`)
+- **Framework**: Next.js 15, React 19, TypeScript, Node 20 (pinned via `.nvmrc`)
 - **Styling**: Tailwind CSS v4
-- **UI**: `@canopy/ui` vendored from `vendor/canopy-ui-0.1.4.tgz`
+- **UI**: `@globalcloudr/canopy-ui` v0.2.9 — installed from npm
 - **Auth/DB**: Supabase shared with the rest of Canopy
 - **Storage**: Supabase Storage — `originals` bucket (shared with PhotoVault)
 - **Plane**: `lib/plane-client.ts` — `PLANE_API_KEY` + `PLANE_WORKSPACE_SLUG` env vars
