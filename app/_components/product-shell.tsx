@@ -12,18 +12,15 @@ import {
   AppSidebarPanelBody,
   AppSidebarSection,
   AppWorkspaceSwitcher,
-  AppSurface,
   CanopyHeader,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   sidebarNavItemClass,
-  cn,
 } from "@globalcloudr/canopy-ui";
 import { supabase } from "@/lib/supabase-client";
 import { buildWorkspaceHref } from "@/lib/workspace-href";
 import {
-  readStoredWorkspaceId,
   writeStoredUserId,
   writeStoredWorkspaceId,
 } from "@/lib/workspace-client";
@@ -400,7 +397,7 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
           orgs.map((org) => ({
             id: org.id,
             label: org.name,
-            href: `${pathname}?workspace=${encodeURIComponent(org.id)}`,
+            href: `${pathname}?workspace=${encodeURIComponent(org.slug ?? org.id)}`,
             active: org.id === activeOrgId,
           }))
         }
