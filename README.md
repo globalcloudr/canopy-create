@@ -3,8 +3,8 @@
 Client-facing request, production, revision, and delivery system for the creative and digital services provided to school clients.
 
 **GitHub**: https://github.com/globalcloudr/canopy-create  
-**Status**: Active development — core production loop is complete through approvals and file delivery  
-**Live URL**: Not deployed yet
+**Status**: Beta  
+**Live URL**: https://canopy-create.vercel.app
 
 ## What Canopy Create Is
 
@@ -61,9 +61,9 @@ Recurring workflows (catalogs, annual reports) are a first-class requirement —
 
 ### Completed
 
-- Next.js 16 / React 19 / TypeScript / Tailwind v4 app shell
-- `@canopy/ui` v0.1.10 vendored locally for shared shell frame, design tokens, typography, and core app font ownership
-- All products use the unified Canopy design system: `--ink`, `--ink-2`, `--faint`, `--text-muted`, `--foreground`, `--surface`, `--surface-muted`, `--accent`, `--rule`, `--border`
+- Next.js 15 / React 19 / TypeScript / Tailwind v4 app shell
+- `@globalcloudr/canopy-ui` v0.2.9 — shared Canopy design system installed from npm (shell frame, design tokens, typography, font ownership)
+- Design tokens: `--ink`, `--ink-2`, `--faint`, `--text-muted`, `--foreground`, `--surface`, `--surface-muted`, `--accent`, `--rule`, `--border`
 - Portal handoff exchange and workspace-backed product session
 - Overview dashboard with actionable summaries (client review queue, open requests, active projects)
 - Login page for direct-access flows
@@ -95,8 +95,8 @@ Recurring workflows (catalogs, annual reports) are a first-class requirement —
   - `canUpdateDeliverables`: item status changes
   - Internal-only: upload proof versions, toggle milestones
   - Client-accessible: submit approvals, post comments, upload attachments
-- Outer shell frame now comes from `@canopy/ui` (`AppShellFrame`, `AppShellSidebar`, `AppShellContent`)
-- Core Canopy app fonts are now loaded from `@canopy/ui` via `canopyFontVariables`
+- Outer shell frame comes from `@globalcloudr/canopy-ui` (`AppShellFrame`, `AppShellSidebar`, `AppShellContent`)
+- Core Canopy app fonts are loaded via `canopyFontVariables`
 
 ### Data Model
 
@@ -118,8 +118,6 @@ Recurring workflows (catalogs, annual reports) are a first-class requirement —
 - Recurring production — clone project for next cycle
 - Client-filtered view — clients see only their own submissions
 - PhotoVault asset linking
-- Portal-side Create launch enablement in `canopy-platform`
-- Deployment
 
 ## Roles
 
@@ -149,6 +147,8 @@ Local dev ports:
 - `canopy-platform` Portal: `http://localhost:3000`
 - `canopy-create`: `http://localhost:3003`
 
+> Note: `canopy-community` also uses port 3003. Run only one at a time locally.
+
 ## Environment Variables
 
 ```
@@ -156,7 +156,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3003
-NEXT_PUBLIC_PORTAL_URL=http://localhost:3000
+NEXT_PUBLIC_PORTAL_URL=http://localhost:3000  # use https://app.usecanopy.school for production
 PLANE_API_KEY=
 PLANE_WORKSPACE_SLUG=
 ```
