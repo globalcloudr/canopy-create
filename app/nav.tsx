@@ -21,7 +21,18 @@ function SettingsIcon({ className }: { className?: string }) {
   );
 }
 
+function HelpIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export const navItems: NavItem[] = [
-  { key: "home", href: "/", label: "Dashboard", icon: HomeIcon as (props: { className?: string }) => ReactNode },
+  { key: "home",     href: "/",        label: "Dashboard", icon: HomeIcon     as (props: { className?: string }) => ReactNode },
   { key: "settings", href: "/settings", label: "Settings", icon: SettingsIcon as (props: { className?: string }) => ReactNode },
+  { key: "help",     href: "/help",     label: "Help",     icon: HelpIcon     as (props: { className?: string }) => ReactNode },
 ];
