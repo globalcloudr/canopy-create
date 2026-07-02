@@ -15,8 +15,8 @@ import {
   updateItem,
 } from "@/lib/create-data";
 import type { ApprovalDecision } from "@/lib/create-status";
-import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
-import { isInternalRole } from "@/lib/create-roles";
+import { getServerActionAccess, requireWorkspaceMember } from "@/lib/server-auth";
+import { canUpdateDeliverables, isInternalRole } from "@/lib/create-roles";
 import {
   notifyDelivered,
   notifyChangesRequested,
@@ -37,7 +37,7 @@ export async function addCommentAction(
   const body = String(formData.get("body") ?? "").trim();
   if (!workspaceId || !itemId || !body) return;
 
-  const user = await getServerActionUser();
+  const { user } = await requireWorkspaceMember(workspaceId);
 
   await addItemComment(workspaceId, {
     item_id: itemId,
@@ -75,7 +75,10 @@ export async function uploadVersionAction(
   if (!(file instanceof File) || file.size === 0) return { error: "No file provided." };
   if (file.size > 50 * 1024 * 1024) return { error: "File must be 50 MB or smaller." };
 
-  const user = await getServerActionUser();
+  const { user, role, isPlatformOperator } = await getServerActionAccess(workspaceId);
+  if (!canUpdateDeliverables(role, isPlatformOperator)) {
+    return { error: "Only internal team members can upload deliverable versions." };
+  }
   const serviceClient = getServiceClient();
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._\-]/g, "_").replace(/__+/g, "_");
@@ -127,7 +130,7 @@ export async function submitApprovalAction(
 ): Promise<void> {
   if (!workspaceId || !itemId) return;
 
-  const user = await getServerActionUser();
+  const { user } = await requireWorkspaceMember(workspaceId);
 
   await submitApproval(workspaceId, {
     item_id: itemId,

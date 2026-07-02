@@ -63,12 +63,7 @@ export default function RequestAttachments({
 
   async function handleDelete(attachment: Attachment) {
     setDeletingId(attachment.id);
-    await deleteAttachmentAction(
-      workspaceId,
-      requestId,
-      attachment.id,
-      attachment.storagePath
-    );
+    await deleteAttachmentAction(workspaceId, requestId, attachment.id);
     startTransition(() => router.refresh());
   }
 
