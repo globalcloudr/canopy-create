@@ -27,7 +27,7 @@ import {
   createRequestSubmissionSchema,
   type CreateRequestSubmissionInput,
 } from "@/lib/create-validators";
-import { getServerActionAccess, getServerActionUser } from "@/lib/server-auth";
+import { getServerActionAccess, requireWorkspaceMember } from "@/lib/server-auth";
 import { canManageProjects, canTriageRequests } from "@/lib/create-roles";
 import {
   createPlaneProject,
@@ -111,7 +111,7 @@ export async function submitCreateRequestAction(
   }
 
   const input = parsed.data;
-  const user = await getServerActionUser();
+  const { user } = await requireWorkspaceMember(workspaceId);
 
   const request = await createRequest(workspaceId, {
     title: input.title,
@@ -304,7 +304,7 @@ export async function uploadAttachmentAction(
     return { error: "File must be 25 MB or smaller." };
   }
 
-  const user = await getServerActionUser();
+  const { user } = await requireWorkspaceMember(workspaceId);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -342,17 +342,35 @@ export async function uploadAttachmentAction(
 export async function deleteAttachmentAction(
   workspaceId: string,
   requestId: string,
-  attachmentId: string,
-  storagePath: string
+  attachmentId: string
 ): Promise<void> {
   if (!workspaceId || !attachmentId) return;
+
+  await requireWorkspaceMember(workspaceId);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase environment variables are not configured.");
   const serviceClient = createClient(url, key);
 
-  await serviceClient.storage.from("originals").remove([storagePath]);
+  // Never trust a caller-supplied storage path: look up the row scoped to this
+  // workspace and delete only the object it references. The `originals` bucket
+  // is shared with PhotoVault, so an arbitrary path here could delete unrelated
+  // media.
+  const { data: row } = await serviceClient
+    .from("create_request_attachments")
+    .select("file_url")
+    .eq("workspace_id", workspaceId)
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (!row) return;
+
+  const storagePath = (row as { file_url?: string | null }).file_url ?? null;
+  if (storagePath && storagePath.startsWith(`create/${workspaceId}/`)) {
+    await serviceClient.storage.from("originals").remove([storagePath]);
+  }
+
   await serviceClient
     .from("create_request_attachments")
     .delete()

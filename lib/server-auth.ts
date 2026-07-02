@@ -238,6 +238,26 @@ export async function getServerActionAccess(workspaceId: string): Promise<{
 }
 
 /**
+ * Server Action guard: require the caller to be a member of the workspace (any
+ * school role) or a platform operator. Throws otherwise.
+ *
+ * Server Actions are POST-invocable endpoints, so authentication alone is not
+ * enough — without this, any authenticated user in any workspace could act on
+ * another workspace by passing its id.
+ */
+export async function requireWorkspaceMember(workspaceId: string): Promise<{
+  user: User;
+  role: string | null;
+  isPlatformOperator: boolean;
+}> {
+  const access = await getServerActionAccess(workspaceId);
+  if (!access.isPlatformOperator && !access.role) {
+    throw new Error("You do not have access to this workspace.");
+  }
+  return access;
+}
+
+/**
  * Converts an error to a NextResponse.
  * RouteAuthError messages are forwarded as-is (they are intentionally user-facing).
  * All other errors are logged server-side and return a generic fallback message.
