@@ -4,6 +4,15 @@ Append new sessions at the top. Do not overwrite history.
 
 ---
 
+## 2026-07-02 — Production readiness: server-action authorization, deps, CI
+
+Part of the full-platform readiness pass. Central plan: `canopy-platform/docs/production-readiness-plan.md`.
+
+- **Security (critical):** `deleteAttachmentAction` had no auth check and deleted any caller-supplied path from the `originals` bucket (shared with PhotoVault) — now requires membership and only deletes the row's own object within the workspace prefix. Added workspace-membership checks to 5 auth-only server actions (`submitCreateRequestAction`, `uploadAttachmentAction`, `addCommentAction`, `uploadVersionAction` [now internal-only], `submitApprovalAction`) via `requireWorkspaceMember`.
+- **Deps/tooling:** Next 16.2.10 (0 vulns); lint restored; CI added.
+- **Deferred (see plan):** client data partitioning (client roles currently see all workspace requests); close the client delivery loop.
+
+---
 ## 2026-04-20 — Design system alignment pass across all products
 
 All Canopy products (photovault, canopy-stories, canopy-reach, canopy-create, canopy-community, canopy-platform portal) are now fully on the shared `@globalcloudr/canopy-ui` design system.

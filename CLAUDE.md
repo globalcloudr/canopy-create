@@ -8,6 +8,8 @@ It should be treated as:
 - not a freelancer marketplace in V1 — but architected so freelancer assignment can be added later
 - an integration layer over Plane (the production engine), exactly as Canopy Community wraps Campaign Monitor and Canopy Reach wraps Facebook/LinkedIn
 
+> **Production readiness (July 2026):** an active security + reliability pass across all Canopy repos. The prioritized plan and live progress log are in `canopy-platform/docs/production-readiness-plan.md`. See this repo's `docs/progress.md` for what changed here.
+
 ## Repos
 
 | Repo | Purpose |
