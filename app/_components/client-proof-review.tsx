@@ -48,6 +48,7 @@ export default function ClientProofReview({
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState<ApprovalDecision | null>(null);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!latestVersion) {
     return (
@@ -60,18 +61,29 @@ export default function ClientProofReview({
   }
 
   async function handleDecision(decision: ApprovalDecision) {
+    if (submitting) return; // guard against double-submit while a decision is in flight
     setSubmitting(decision);
-    await submitApprovalAction(
-      workspaceId,
-      itemId,
-      projectId,
-      latestVersion!.id,
-      decision,
-      note.trim() || null
-    );
-    setDone(true);
-    setSubmitting(null);
-    startTransition(() => router.refresh());
+    setError(null);
+    try {
+      const result = await submitApprovalAction(
+        workspaceId,
+        itemId,
+        projectId,
+        latestVersion!.id,
+        decision,
+        note.trim() || null
+      );
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      setDone(true);
+      startTransition(() => router.refresh());
+    } catch {
+      setError("We couldn't save your response. Please check your connection and try again.");
+    } finally {
+      setSubmitting(null);
+    }
   }
 
   // Already decided
@@ -230,11 +242,21 @@ export default function ClientProofReview({
         />
       </div>
 
+      {/* Submission error */}
+      {error && (
+        <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-[13px] font-medium text-red-700">{error}</p>
+          <p className="mt-0.5 text-[12px] text-red-600">
+            Your note is still here — try submitting again.
+          </p>
+        </div>
+      )}
+
       {/* Decision buttons */}
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
-          disabled={isPending}
+          disabled={submitting !== null || isPending}
           onClick={() => void handleDecision("approved")}
           className="flex-1 rounded-2xl bg-emerald-600 px-5 py-3 text-[14px] font-semibold text-white hover:bg-emerald-700 transition disabled:opacity-50"
         >
@@ -242,7 +264,7 @@ export default function ClientProofReview({
         </button>
         <button
           type="button"
-          disabled={isPending}
+          disabled={submitting !== null || isPending}
           onClick={() => void handleDecision("changes_requested")}
           className="flex-1 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-3 text-[14px] font-semibold text-[var(--foreground)] hover:bg-[var(--border)] transition disabled:opacity-50"
         >

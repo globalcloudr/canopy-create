@@ -13,7 +13,7 @@ import { canManageProjects, isClientRole } from "@/lib/create-roles";
 
 type RequestDetailPageProps = {
   params: Promise<{ requestId: string }>;
-  searchParams: Promise<{ workspace?: string | string[] }>;
+  searchParams: Promise<{ workspace?: string | string[]; failedUploads?: string | string[] }>;
 };
 
 function formatDate(iso: string) {
@@ -133,6 +133,32 @@ export default async function RequestDetailPage({
         ? workspaceParam[0] ?? ""
         : "";
 
+  const failedUploadsParam = resolved.failedUploads;
+  const failedUploadsCount = Number(
+    typeof failedUploadsParam === "string"
+      ? failedUploadsParam
+      : Array.isArray(failedUploadsParam)
+        ? failedUploadsParam[0]
+        : 0,
+  ) || 0;
+
+  const failedUploadsBanner =
+    failedUploadsCount > 0 ? (
+      <div
+        role="alert"
+        className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4"
+      >
+        <p className="text-[14px] font-semibold text-amber-800">
+          Your request was created, but{" "}
+          {failedUploadsCount === 1 ? "one file" : `${failedUploadsCount} files`} didn&apos;t
+          upload.
+        </p>
+        <p className="mt-0.5 text-[13px] text-amber-700">
+          Use the Attachments section below to add them again.
+        </p>
+      </div>
+    ) : null;
+
   if (!workspaceId) {
     return (
       <ClientShell activeNav="requests">
@@ -233,6 +259,8 @@ export default async function RequestDetailPage({
             </p>
           </div>
 
+          {failedUploadsBanner}
+
           {isConverted && convertedProjectHref && (
             <AppSurface className="px-6 py-5 sm:px-8">
               <p className="text-[15px] font-medium text-[var(--foreground)]">
@@ -297,7 +325,7 @@ export default async function RequestDetailPage({
                 </dl>
               </AppSurface>
 
-              {attachments.length > 0 && (
+              {(attachments.length > 0 || failedUploadsCount > 0) && (
                 <AppSurface className="px-6 py-6 sm:px-8">
                   <RequestAttachments
                     workspaceId={workspaceId}
@@ -358,6 +386,8 @@ export default async function RequestDetailPage({
             ) : null}
           </div>
         </div>
+
+        {failedUploadsBanner}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
 

@@ -111,10 +111,24 @@ export default function SocialRequestForm({
         setFormError(result.error ?? "Something went wrong. Please try again.");
         return;
       }
+      let failedUploads = 0;
       for (const file of selectedFiles) {
         const fd = new FormData();
         fd.append("file", file);
-        await uploadAttachmentAction(workspaceId, result.requestId, fd);
+        try {
+          const uploadResult = await uploadAttachmentAction(workspaceId, result.requestId, fd);
+          if (uploadResult?.error) failedUploads += 1;
+        } catch {
+          failedUploads += 1;
+        }
+      }
+      if (failedUploads > 0) {
+        // Land the user on the request page, where the Attachments section
+        // lets them re-add the files, with a banner explaining what happened.
+        router.push(
+          `/requests/${result.requestId}?workspace=${encodeURIComponent(workspaceId)}&failedUploads=${failedUploads}`
+        );
+        return;
       }
       router.push(successRedirect);
     });
