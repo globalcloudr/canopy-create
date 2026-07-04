@@ -127,49 +127,60 @@ export async function submitApprovalAction(
   versionId: string | null,
   decision: ApprovalDecision,
   note: string | null
-): Promise<void> {
-  if (!workspaceId || !itemId) return;
+): Promise<{ error?: string }> {
+  if (!workspaceId || !itemId) return { error: "Missing context." };
 
-  const { user } = await requireWorkspaceMember(workspaceId);
+  try {
+    const { user } = await requireWorkspaceMember(workspaceId);
 
-  await submitApproval(workspaceId, {
-    item_id: itemId,
-    version_id: versionId,
-    decision,
-    note,
-    decided_by: user.id,
-  });
-
-  const item = await getItem(workspaceId, itemId);
-
-  if (projectId) {
-    await logActivity(workspaceId, {
-      project_id: projectId,
+    await submitApproval(workspaceId, {
       item_id: itemId,
-      actor_user_id: user.id,
-      event_type: "item_approved",
-      metadata: { item_title: item.title, decision },
+      version_id: versionId,
+      decision,
+      note,
+      decided_by: user.id,
     });
-  }
 
-  // Changes requested — notify the internal team so they know to revise
-  if (decision === "changes_requested" && projectId) {
-    const [project, workspaceName] = await Promise.all([
-      getProject(workspaceId, projectId),
-      getWorkspaceName(workspaceId),
-    ]);
-    void notifyChangesRequested({
-      workspaceId,
-      workspaceName,
-      itemId,
-      itemTitle: item.title,
-      projectTitle: project.title,
-      clientNote: note,
-      actorUserId: user.id,
-    });
-  }
+    const item = await getItem(workspaceId, itemId);
 
-  revalidatePath(`/items/${itemId}`, "page");
+    if (projectId) {
+      await logActivity(workspaceId, {
+        project_id: projectId,
+        item_id: itemId,
+        actor_user_id: user.id,
+        event_type: "item_approved",
+        metadata: { item_title: item.title, decision },
+      });
+    }
+
+    // Changes requested — notify the internal team so they know to revise
+    if (decision === "changes_requested" && projectId) {
+      const [project, workspaceName] = await Promise.all([
+        getProject(workspaceId, projectId),
+        getWorkspaceName(workspaceId),
+      ]);
+      void notifyChangesRequested({
+        workspaceId,
+        workspaceName,
+        itemId,
+        itemTitle: item.title,
+        projectTitle: project.title,
+        clientNote: note,
+        actorUserId: user.id,
+      });
+    }
+
+    revalidatePath(`/items/${itemId}`, "page");
+    return {};
+  } catch (error) {
+    console.error("submitApprovalAction failed", error);
+    return {
+      error:
+        error instanceof Error && error.message
+          ? error.message
+          : "We couldn't save your response. Please try again.",
+    };
+  }
 }
 
 export async function markDeliveredAction(

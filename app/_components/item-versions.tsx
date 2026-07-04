@@ -74,6 +74,7 @@ export default function ItemVersions({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [approvalNote, setApprovalNote] = useState("");
   const [submittingDecision, setSubmittingDecision] = useState<ApprovalDecision | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [delivering, setDelivering] = useState(false);
   const [deliverError, setDeliverError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -108,17 +109,27 @@ export default function ItemVersions({
 
   async function handleApproval(decision: ApprovalDecision) {
     setSubmittingDecision(decision);
-    await submitApprovalAction(
-      workspaceId,
-      itemId,
-      projectId,
-      latestVersionId,
-      decision,
-      approvalNote.trim() || null
-    );
-    setApprovalNote("");
-    setSubmittingDecision(null);
-    startTransition(() => router.refresh());
+    setApprovalError(null);
+    try {
+      const result = await submitApprovalAction(
+        workspaceId,
+        itemId,
+        projectId,
+        latestVersionId,
+        decision,
+        approvalNote.trim() || null
+      );
+      if (result?.error) {
+        setApprovalError(result.error);
+        return;
+      }
+      setApprovalNote("");
+      startTransition(() => router.refresh());
+    } catch {
+      setApprovalError("We couldn't save the review. Please try again.");
+    } finally {
+      setSubmittingDecision(null);
+    }
   }
 
   const approvalsByVersion = approvals.reduce<Record<string, Approval[]>>((acc, a) => {
@@ -276,6 +287,11 @@ export default function ItemVersions({
               placeholder="Optional note…"
               className="w-full resize-none rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[13px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             />
+            {approvalError && (
+              <p role="alert" className="text-[12px] text-red-600">
+                {approvalError}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {(["approved", "approved_with_changes", "changes_requested"] as ApprovalDecision[]).map(
                 (decision) => (
