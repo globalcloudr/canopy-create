@@ -83,21 +83,28 @@ async function getClientRecipients(
 
   if (!userIds.length) return [];
 
-  // 2. Fetch profiles for those users
-  const { data: profiles, error: profilesError } = await client
-    .from("profiles")
-    .select("user_id, email, display_name, full_name")
-    .in("user_id", userIds);
+  // 2. Resolve emails/names from auth.users via the admin API — the profiles
+  // table has NO email/name columns, so the previous profiles query errored on
+  // every call and these notifications silently never sent.
+  const recipients: Recipient[] = [];
+  await Promise.all(
+    userIds.map(async (userId) => {
+      const { data } = await client.auth.admin.getUserById(userId);
+      const authUser = data.user;
+      if (!authUser?.email) return;
+      const meta = (authUser.user_metadata ?? {}) as {
+        full_name?: string | null;
+        name?: string | null;
+      };
+      recipients.push({
+        userId,
+        email: authUser.email,
+        name: meta.full_name?.trim() || meta.name?.trim() || "there",
+      });
+    })
+  );
 
-  if (profilesError || !profiles?.length) return [];
-
-  return profiles
-    .filter((p) => p.email)
-    .map((p) => ({
-      userId: p.user_id as string,
-      email: p.email as string,
-      name: (p.display_name ?? p.full_name ?? "there") as string,
-    }));
+  return recipients;
 }
 
 // ─── Notification dispatchers ──────────────────────────────────────────────────
@@ -211,18 +218,17 @@ export async function notifyChangesRequested(
     return;
   }
 
-  // Fetch the requesting client's name for personalisation
+  // Fetch the requesting client's name for personalisation. profiles has no
+  // name columns — read from auth.users via the admin API.
   let actorName = "A client";
   try {
     const client = getServiceClient();
-    const { data } = await client
-      .from("profiles")
-      .select("display_name, full_name")
-      .eq("user_id", params.actorUserId)
-      .maybeSingle();
-    if (data) {
-      actorName = data.display_name ?? data.full_name ?? actorName;
-    }
+    const { data } = await client.auth.admin.getUserById(params.actorUserId);
+    const meta = (data.user?.user_metadata ?? {}) as {
+      full_name?: string | null;
+      name?: string | null;
+    };
+    actorName = meta.full_name?.trim() || meta.name?.trim() || data.user?.email || actorName;
   } catch {
     // Non-fatal — use default name
   }
