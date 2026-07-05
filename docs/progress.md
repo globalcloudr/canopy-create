@@ -4,6 +4,20 @@ Append new sessions at the top. Do not overwrite history.
 
 ---
 
+## 2026-07-05 — UX phases, upload-failure recovery, email-recipient fix, shared launcher keys
+
+Part of the full-platform readiness pass. Central plan: `canopy-platform/docs/production-readiness-plan.md`.
+
+- **Upload-failure recovery:** the request detail page reads `?failedUploads=N` and shows a recovery banner (attachment upload failures land the user there); school view renders the Attachments section even with zero attachments.
+- **Action contract:** `submitApprovalAction` now returns `{ error?: string }` (was `Promise<void>`) — callers must check it; approvals/attachments no longer fail silently.
+- **Email-recipient fix:** notification emails resolve recipients via `auth.admin.getUserById` (NOT `profiles` — it has no email/name columns; the old profiles query meant school-facing emails never sent).
+- **Attachment constraints:** new `lib/attachment-constraints.ts` (shared accept list + 25MB pre-check) used by all four request forms.
+- **Polish:** app title fixed to "Canopy Create".
+- **Shared UI:** `@globalcloudr/canopy-ui` → `^0.2.13`. Mobile nav is now built into the shell — `CanopyHeader` renders a hamburger below `md` opening the sidebar nav in a non-modal sheet; apps must not add their own drawers. Launcher product keys now come from the shared `@globalcloudr/canopy-ui/product-keys` subpath (`LAUNCHER_PRODUCT_KEYS`, `isLauncherProductKey`, `LAUNCHER_PRODUCT_LABELS`) — three per-app copies had drifted and silently hid Canopy Create from switchers; never redeclare launcher key lists locally. Switcher display remains entitlement-driven per workspace.
+- **Launch hardening:** module-level replay guard over single-use `?launch=` codes in the product shell — a consumed code is never re-exchanged on effect re-runs.
+
+---
+
 ## 2026-07-02 — Production readiness: server-action authorization, deps, CI
 
 Part of the full-platform readiness pass. Central plan: `canopy-platform/docs/production-readiness-plan.md`.

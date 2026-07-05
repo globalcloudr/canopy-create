@@ -27,7 +27,7 @@ All repos share one Supabase project.
 
 - **Framework**: Next.js 15, React 19, TypeScript, Node 20 (pinned via `.nvmrc`)
 - **Styling**: Tailwind CSS v4
-- **UI**: `@globalcloudr/canopy-ui` v0.2.9 — installed from npm
+- **UI**: `@globalcloudr/canopy-ui` ^0.2.13 — installed from npm. Mobile navigation is built into the shell: `CanopyHeader` renders a hamburger below `md` opening the sidebar nav in a non-modal sheet — do NOT add an app-level drawer. Launcher product keys come from the shared `@globalcloudr/canopy-ui/product-keys` subpath (`LAUNCHER_PRODUCT_KEYS`, `isLauncherProductKey`, `LAUNCHER_PRODUCT_LABELS`) — never redeclare launcher key lists locally (three per-app copies once drifted and silently hid Canopy Create from switchers)
 - **Auth/DB**: Supabase shared with the rest of Canopy
 - **Storage**: Supabase Storage — `originals` bucket (shared with PhotoVault)
 - **Plane**: `lib/plane-client.ts` — `PLANE_API_KEY` + `PLANE_WORKSPACE_SLUG` env vars
@@ -40,7 +40,7 @@ canopy-create/
   app/
     _components/
       client-shell.tsx          — sidebar nav shell (client component)
-      product-shell.tsx         — auth/session/workspace bootstrap shell
+      product-shell.tsx         — auth/session/workspace bootstrap shell (module-level replay guard over single-use ?launch= codes — never re-exchange a consumed code on effect re-runs)
       request-type-picker.tsx   — step 1 of new request flow
       design-project-form.tsx
       website-update-form.tsx
@@ -63,7 +63,7 @@ canopy-create/
       actions.ts                — addMilestone, toggleMilestone, addItem, changeItemStatus, changeProjectStatus
       page.tsx                  — projects list
     requests/
-      [requestId]/page.tsx      — request detail with brief, status, attachments
+      [requestId]/page.tsx      — request detail with brief, status, attachments; reads ?failedUploads=N and shows a recovery banner (attachment upload failures land here); school view renders the Attachments section even with zero attachments
       new/page.tsx              — new request flow
       actions.ts                — submitCreateRequest, changeRequestStatus, convertRequestToProject, uploadAttachment, deleteAttachment
       page.tsx                  — requests list
@@ -84,6 +84,7 @@ canopy-create/
     create-status.ts            — status enums (ProjectStatus, RequestStatus, ItemStatus, etc.)
     create-types.ts             — TypeScript interfaces for all domain objects
     create-validators.ts        — Zod validators for intake forms
+    attachment-constraints.ts   — shared attachment accept list + 25MB pre-check, used by all four request forms
     plane-client.ts             — Plane API wrapper (createPlaneProject, createPlaneIssue, etc.)
     server-auth.ts              — getServerActionAccess, getServerActionUser, requireWorkspaceAccess
     supabase-client.ts          — browser Supabase client
@@ -148,6 +149,10 @@ All per-type brief fields are stored in `create_requests.details` (JSONB) — no
 
 **Service client**: use `createClient(url, serviceRoleKey)` directly in `lib/create-data.ts` for all data reads/writes — not the cookie client.
 
+**Action return contracts**: `submitApprovalAction` returns `{ error?: string }` (was `Promise<void>`) — callers must check it so approvals/attachments do not fail silently.
+
+**Email recipients**: notification emails resolve recipients via `auth.admin.getUserById` — NOT `profiles`, which has no email/name columns (the old profiles query meant school-facing emails never sent).
+
 ## Plane Integration
 
 - `lib/plane-client.ts` wraps the Plane API (`https://api.plane.so/api/v1`)
@@ -181,6 +186,8 @@ See `docs/PRD.md` for the full phase-by-phase plan. Summary:
 - All Supabase reads/writes live in `lib/create-data.ts`
 - Use `@canopy/ui` for interface work — no new component libraries
 - Use `lib/server-auth.ts` for all auth — do not re-implement
+- Use `lib/attachment-constraints.ts` for attachment accept lists and the 25MB pre-check in all request forms
+- Never resolve user emails/names from `profiles` (it has neither column) — use `auth.admin.getUserById`
 - Plane sync is always fire-and-log — never block the user on Plane failure
 - Run `npx tsc --noEmit` before considering any change done
 - Do not move Create-specific workflows into `canopy-platform`
