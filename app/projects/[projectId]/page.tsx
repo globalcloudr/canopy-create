@@ -283,9 +283,9 @@ export default async function ProjectDetailPage({
             >
               ← My Work
             </Link>
-            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {project.title}
-            </p>
+            </h1>
             <p className="mt-1 text-[14px] text-[var(--text-muted)]">
               {STAGE_MESSAGE[stage]}
             </p>
@@ -312,7 +312,7 @@ export default async function ProjectDetailPage({
                     </div>
                     <span
                       className={`text-center text-[11px] font-medium leading-tight ${
-                        isActive ? "text-[var(--primary)]" : isComplete ? "text-[var(--text-muted)]" : "text-[var(--border)]"
+                        isActive ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
                       }`}
                     >
                       {label}
@@ -515,9 +515,9 @@ export default async function ProjectDetailPage({
             >
               ← Projects
             </Link>
-            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {project.title}
-            </p>
+            </h1>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <Badge>{formatLabel(project.status)}</Badge>
               <span className="text-[13px] text-[var(--text-muted)]">

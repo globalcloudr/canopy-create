@@ -157,14 +157,32 @@ function MilestoneRow({
                 }}
                 className="w-full rounded border border-[var(--primary)] bg-white px-2 py-0.5 text-[14px] font-medium text-[var(--foreground)] outline-none"
               />
+            ) : canEdit ? (
+              <button
+                type="button"
+                onClick={() => startEdit("title", milestone.title)}
+                aria-label={`Edit title: ${milestone.title}`}
+                className={`group block w-full text-left text-[14px] font-medium leading-snug ${
+                  milestone.milestone_status === "completed"
+                    ? "text-[var(--text-muted)] line-through"
+                    : "text-[var(--foreground)]"
+                } cursor-pointer hover:text-[var(--primary)]`}
+              >
+                {milestone.title}
+                <span
+                  aria-hidden="true"
+                  className="ml-1.5 inline-block text-[11px] opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
+                >
+                  ✎
+                </span>
+              </button>
             ) : (
               <p
-                onClick={() => startEdit("title", milestone.title)}
                 className={`text-[14px] font-medium leading-snug ${
                   milestone.milestone_status === "completed"
                     ? "text-[var(--text-muted)] line-through"
                     : "text-[var(--foreground)]"
-                } ${canEdit ? "cursor-pointer hover:text-[var(--primary)]" : ""}`}
+                }`}
               >
                 {milestone.title}
               </p>
@@ -260,13 +278,23 @@ function MilestoneRow({
                 rows={2}
                 className="mt-1.5 w-full rounded border border-[var(--primary)] bg-white px-2 py-1 text-[13px] leading-relaxed text-[var(--foreground)] outline-none resize-none"
               />
-            ) : milestone.description ? (
-              <p
+            ) : milestone.description && canEdit ? (
+              <button
+                type="button"
                 onClick={() => startEdit("description", milestone.description ?? "")}
-                className={`mt-1.5 text-[13px] leading-relaxed text-[var(--text-muted)] ${
-                  canEdit ? "cursor-pointer hover:text-[var(--foreground)]" : ""
-                }`}
+                aria-label="Edit description"
+                className="group mt-1.5 block w-full text-left text-[13px] leading-relaxed text-[var(--text-muted)] cursor-pointer hover:text-[var(--foreground)]"
               >
+                {milestone.description}
+                <span
+                  aria-hidden="true"
+                  className="ml-1.5 inline-block text-[11px] opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
+                >
+                  ✎
+                </span>
+              </button>
+            ) : milestone.description ? (
+              <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-muted)]">
                 {milestone.description}
               </p>
             ) : canEdit ? (

@@ -17,6 +17,11 @@ import {
 
 import { submitCreateRequestAction, uploadAttachmentAction } from "@/app/requests/actions";
 import {
+  ATTACHMENT_ACCEPT,
+  oversizedFilesMessage,
+  partitionOversizedFiles,
+} from "@/lib/attachment-constraints";
+import {
   socialRequestSchema,
   type SocialRequestInput,
 } from "@/lib/create-validators";
@@ -68,6 +73,7 @@ export default function SocialRequestForm({
   const [callToAction, setCallToAction] = useState("");
   const [desiredPostDate, setDesiredPostDate] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<SocialRequestErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -145,7 +151,7 @@ export default function SocialRequestForm({
 
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
-          <Label>Title</Label>
+          <Label>Title <span className="text-red-500">*</span></Label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -158,7 +164,7 @@ export default function SocialRequestForm({
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Target Platforms</Label>
+            <Label>Target Platforms <span className="text-red-500">*</span></Label>
             <Select value={targetPlatforms} onValueChange={setTargetPlatforms}>
               <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Select platforms" />
@@ -199,7 +205,7 @@ export default function SocialRequestForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Campaign Goals</Label>
+          <Label>Campaign Goals <span className="text-red-500">*</span></Label>
           <Textarea
             value={campaignGoals}
             onChange={(e) => setCampaignGoals(e.target.value)}
@@ -238,8 +244,17 @@ export default function SocialRequestForm({
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ATTACHMENT_ACCEPT}
             className="hidden"
-            onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
+            onChange={(e) => {
+              const { accepted, oversized } = partitionOversizedFiles(
+                Array.from(e.target.files ?? [])
+              );
+              setFileError(
+                oversized.length > 0 ? oversizedFilesMessage(oversized) : null
+              );
+              setSelectedFiles(accepted);
+            }}
           />
           <button
             type="button"
@@ -248,6 +263,9 @@ export default function SocialRequestForm({
           >
             + Attach files
           </button>
+          {fileError ? (
+            <BodyText className="text-sm text-red-600">{fileError}</BodyText>
+          ) : null}
           {selectedFiles.length > 0 && (
             <ul className="mt-1 space-y-1">
               {selectedFiles.map((f, i) => (

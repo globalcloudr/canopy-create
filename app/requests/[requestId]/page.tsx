@@ -251,9 +251,9 @@ export default async function RequestDetailPage({
             >
               ← My Work
             </Link>
-            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {request.title}
-            </p>
+            </h1>
             <p className="mt-1.5 text-[14px] text-[var(--text-muted)]">
               {statusMessage[request.status] ?? "We've received your job."}
             </p>
@@ -355,9 +355,9 @@ export default async function RequestDetailPage({
             >
               ← Requests
             </Link>
-            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {request.title}
-            </p>
+            </h1>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <Badge>{formatLabel(request.status)}</Badge>
               <span className="text-[13px] text-[var(--text-muted)]">

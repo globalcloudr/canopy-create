@@ -17,6 +17,11 @@ import {
 
 import { submitCreateRequestAction, uploadAttachmentAction } from "@/app/requests/actions";
 import {
+  ATTACHMENT_ACCEPT,
+  oversizedFilesMessage,
+  partitionOversizedFiles,
+} from "@/lib/attachment-constraints";
+import {
   websiteUpdateSchema,
   type WebsiteUpdateInput,
 } from "@/lib/create-validators";
@@ -78,6 +83,7 @@ export default function WebsiteUpdateForm({
   const [priority, setPriority] = useState<WebsiteUpdateInput["priority"]>(undefined);
   const [desiredGoLiveDate, setDesiredGoLiveDate] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<WebsiteUpdateErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -155,7 +161,7 @@ export default function WebsiteUpdateForm({
 
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
-          <Label>Title</Label>
+          <Label>Title <span className="text-red-500">*</span></Label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -194,7 +200,7 @@ export default function WebsiteUpdateForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Target URL</Label>
+          <Label>Target URL <span className="text-red-500">*</span></Label>
           <Input
             value={targetUrl}
             onChange={(e) => setTargetUrl(e.target.value)}
@@ -207,7 +213,7 @@ export default function WebsiteUpdateForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Update Details</Label>
+          <Label>Update Details <span className="text-red-500">*</span></Label>
           <Textarea
             value={updateDetails}
             onChange={(e) => setUpdateDetails(e.target.value)}
@@ -258,8 +264,17 @@ export default function WebsiteUpdateForm({
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ATTACHMENT_ACCEPT}
             className="hidden"
-            onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
+            onChange={(e) => {
+              const { accepted, oversized } = partitionOversizedFiles(
+                Array.from(e.target.files ?? [])
+              );
+              setFileError(
+                oversized.length > 0 ? oversizedFilesMessage(oversized) : null
+              );
+              setSelectedFiles(accepted);
+            }}
           />
           <button
             type="button"
@@ -268,6 +283,9 @@ export default function WebsiteUpdateForm({
           >
             + Attach files
           </button>
+          {fileError ? (
+            <BodyText className="text-sm text-red-600">{fileError}</BodyText>
+          ) : null}
           {selectedFiles.length > 0 && (
             <ul className="mt-1 space-y-1">
               {selectedFiles.map((f, i) => (

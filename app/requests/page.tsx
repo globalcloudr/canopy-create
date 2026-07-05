@@ -111,11 +111,21 @@ export default async function RequestsPage({
           {!workspaceId ? (
             <BodyText muted>Select a workspace to view requests.</BodyText>
           ) : requests.length === 0 ? (
-            <BodyText muted>
-              {currentFilter === "active"
-                ? "No open requests for this workspace."
-                : "No requests found for this workspace."}
-            </BodyText>
+            <div className="px-8 py-14 text-center">
+              <p className="text-base font-medium text-[var(--foreground)]">
+                {currentFilter === "active"
+                  ? "No open requests"
+                  : "No requests yet"}
+              </p>
+              <BodyText muted className="mt-1 mb-6">
+                {currentFilter === "active"
+                  ? "No open requests for this workspace."
+                  : "No requests found for this workspace."}
+              </BodyText>
+              <Button variant="accent" asChild>
+                <Link href={newRequestHref}>Submit the first request</Link>
+              </Button>
+            </div>
           ) : (
             <div className="divide-y divide-[var(--border)]">
               {requests.map((request) => (

@@ -17,6 +17,11 @@ import {
 
 import { submitCreateRequestAction, uploadAttachmentAction } from "@/app/requests/actions";
 import {
+  ATTACHMENT_ACCEPT,
+  oversizedFilesMessage,
+  partitionOversizedFiles,
+} from "@/lib/attachment-constraints";
+import {
   designProjectSchema,
   type DesignProjectInput,
 } from "@/lib/create-validators";
@@ -75,6 +80,7 @@ export default function DesignProjectForm({
   const [quantity, setQuantity] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(defaultDeliveryDate ?? "");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<DesignProjectErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -152,7 +158,7 @@ export default function DesignProjectForm({
 
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
-          <Label>Title</Label>
+          <Label>Title <span className="text-red-500">*</span></Label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -164,7 +170,7 @@ export default function DesignProjectForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Project Type</Label>
+          <Label>Project Type <span className="text-red-500">*</span></Label>
           <Select
             value={selectedRequestType}
             onValueChange={(v) => setSelectedRequestType(v as RequestType)}
@@ -186,7 +192,7 @@ export default function DesignProjectForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Description</Label>
+          <Label>Description <span className="text-red-500">*</span></Label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -257,8 +263,17 @@ export default function DesignProjectForm({
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ATTACHMENT_ACCEPT}
             className="hidden"
-            onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
+            onChange={(e) => {
+              const { accepted, oversized } = partitionOversizedFiles(
+                Array.from(e.target.files ?? [])
+              );
+              setFileError(
+                oversized.length > 0 ? oversizedFilesMessage(oversized) : null
+              );
+              setSelectedFiles(accepted);
+            }}
           />
           <button
             type="button"
@@ -267,6 +282,9 @@ export default function DesignProjectForm({
           >
             + Attach files
           </button>
+          {fileError ? (
+            <BodyText className="text-sm text-red-600">{fileError}</BodyText>
+          ) : null}
           {selectedFiles.length > 0 && (
             <ul className="mt-1 space-y-1">
               {selectedFiles.map((f, i) => (
