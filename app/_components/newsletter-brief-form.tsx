@@ -17,6 +17,11 @@ import {
 
 import { submitCreateRequestAction, uploadAttachmentAction } from "@/app/requests/actions";
 import {
+  ATTACHMENT_ACCEPT,
+  oversizedFilesMessage,
+  partitionOversizedFiles,
+} from "@/lib/attachment-constraints";
+import {
   newsletterBriefSchema,
   type NewsletterBriefInput,
 } from "@/lib/create-validators";
@@ -65,6 +70,7 @@ export default function NewsletterBriefForm({
   const [keyTopics, setKeyTopics] = useState("");
   const [featuredEvents, setFeaturedEvents] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [errors, setErrors] = useState<NewsletterBriefErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -142,7 +148,7 @@ export default function NewsletterBriefForm({
 
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
-          <Label>Title</Label>
+          <Label>Title <span className="text-red-500">*</span></Label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -178,7 +184,7 @@ export default function NewsletterBriefForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Target Send Date</Label>
+            <Label>Target Send Date <span className="text-red-500">*</span></Label>
             <Input
               type="date"
               value={targetSendDate}
@@ -200,7 +206,7 @@ export default function NewsletterBriefForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Key Topics</Label>
+          <Label>Key Topics <span className="text-red-500">*</span></Label>
           <Textarea
             value={keyTopics}
             onChange={(e) => setKeyTopics(e.target.value)}
@@ -229,8 +235,17 @@ export default function NewsletterBriefForm({
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ATTACHMENT_ACCEPT}
             className="hidden"
-            onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
+            onChange={(e) => {
+              const { accepted, oversized } = partitionOversizedFiles(
+                Array.from(e.target.files ?? [])
+              );
+              setFileError(
+                oversized.length > 0 ? oversizedFilesMessage(oversized) : null
+              );
+              setSelectedFiles(accepted);
+            }}
           />
           <button
             type="button"
@@ -239,6 +254,9 @@ export default function NewsletterBriefForm({
           >
             + Attach files
           </button>
+          {fileError ? (
+            <BodyText className="text-sm text-red-600">{fileError}</BodyText>
+          ) : null}
           {selectedFiles.length > 0 && (
             <ul className="mt-1 space-y-1">
               {selectedFiles.map((f, i) => (

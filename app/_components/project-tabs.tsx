@@ -14,12 +14,17 @@ export default function ProjectTabs({
   const router = useRouter();
 
   return (
-    <div className="flex gap-1 rounded-2xl bg-[var(--surface)] p-1 border border-[var(--border)]">
+    <div
+      role="tablist"
+      className="flex gap-1 overflow-x-auto rounded-2xl bg-[var(--surface)] p-1 border border-[var(--border)]"
+    >
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
           <button
             key={tab.key}
+            role="tab"
+            aria-selected={isActive}
             onClick={() => {
               const sep = baseUrl.includes("?") ? "&" : "?";
               router.push(`${baseUrl}${sep}tab=${tab.key}`, { scroll: false });

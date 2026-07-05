@@ -201,14 +201,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       delivered: "text-emerald-600",
     };
 
-    // STAGE_LABEL still used in project detail page (not here) — keep for compatibility
-    const STAGE_COLOR: Record<string, string> = {
-      received: "text-[var(--text-muted)]",
-      production: "text-blue-600",
-      review: "text-amber-600",
-      delivered: "text-emerald-600",
-    };
-
     // Unified job list: pending requests + active projects, newest first
     type ClientJob =
       | { kind: "request"; request: CreateRequest }
@@ -312,7 +304,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         return (
                           <div key={sub.id} className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[13px] text-[var(--text-muted)]">📅</span>
+                              <span aria-hidden="true" className="text-[13px] text-[var(--text-muted)]">📅</span>
                               <span className="text-[13px] text-[var(--foreground)]">
                                 Monthly Newsletter
                               </span>
@@ -339,7 +331,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       return (
                         <div key={sub.id} className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[13px] text-[var(--text-muted)]">📅</span>
+                            <span aria-hidden="true" className="text-[13px] text-[var(--text-muted)]">📅</span>
                             <span className="text-[13px] text-[var(--foreground)]">
                               {SUBSCRIPTION_LABELS[sub.subscription_type]}
                             </span>
@@ -385,7 +377,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                   const stage = projectStage(job.items);
                   const label = STATUS_LABEL[stage] ?? formatLabel(stage);
-                  const color = STAGE_COLOR[stage] ?? "text-[var(--text-muted)]";
+                  const color = STATUS_COLOR[stage] ?? "text-[var(--text-muted)]";
                   const completed = job.milestones.filter((m) => m.milestone_status === "completed").length;
                   const total = job.milestones.length;
                   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;

@@ -4,6 +4,11 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { uploadAttachmentAction, deleteAttachmentAction } from "@/app/requests/actions";
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENT_BYTES,
+  MAX_ATTACHMENT_LABEL,
+} from "@/lib/attachment-constraints";
 
 type Attachment = {
   id: string;
@@ -42,6 +47,14 @@ export default function RequestAttachments({
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setUploadError(
+        `${file.name} is larger than the ${MAX_ATTACHMENT_LABEL} per-file limit. Please choose a smaller file.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
 
     setUploadError(null);
     setUploading(true);
@@ -86,7 +99,7 @@ export default function RequestAttachments({
           type="file"
           className="hidden"
           onChange={handleFileChange}
-          accept="*/*"
+          accept={ATTACHMENT_ACCEPT}
         />
       </div>
 

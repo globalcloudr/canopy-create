@@ -30,13 +30,6 @@ function formatLabel(value: string) {
     .join(" ");
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "text-[var(--text-muted)]",
-  in_progress: "text-blue-700",
-  in_review: "text-amber-700",
-  completed: "text-emerald-700",
-};
-
 export default async function ItemDetailPage({
   params,
   searchParams,
@@ -195,9 +188,9 @@ export default async function ItemDetailPage({
             >
               ← Back to job
             </Link>
-            <p className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {item.title}
-            </p>
+            </h1>
             {item.status === "in_review" && !item.delivered_at && (
               <p className="mt-1.5 text-[14px] text-amber-600 font-medium">
                 Your proof is ready — please review and let us know what you think.
@@ -257,9 +250,9 @@ export default async function ItemDetailPage({
             {projectLabel}
           </Link>
           <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+            <h1 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {item.title}
-            </p>
+            </h1>
             <div className="shrink-0">
               {canUpdateStatus ? (
                 <ItemStatusSelect

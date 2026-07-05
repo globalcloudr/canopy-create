@@ -4,8 +4,8 @@ import { canopyFontVariables } from "@globalcloudr/canopy-ui";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Canopy Product",
-  description: "A Canopy product",
+  title: "Canopy Create",
+  description: "Design requests and creative projects for your school",
 };
 
 export default function RootLayout({
