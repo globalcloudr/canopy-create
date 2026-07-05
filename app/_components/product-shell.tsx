@@ -49,6 +49,11 @@ const PRODUCT_NAME = "Canopy Create";
 
 const PORTAL_URL = process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://app.usecanopy.school";
 
+// Launch handoff codes are single-use. Track exchanged codes so an effect
+// re-run (remount, strict mode, searchParams change) never re-exchanges a
+// consumed code, fails, and kicks the user out.
+const exchangedLaunchCodes = new Set<string>();
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type OrgOption = { id: string; name: string; slug: string | null };
@@ -208,7 +213,16 @@ export function ProductShell({ activeNav, navItems, children }: ProductShellProp
       try {
         // 1. Exchange Portal launch code if present
         const launchCode = searchParams.get("launch")?.trim();
-        if (launchCode) {
+        if (launchCode && exchangedLaunchCodes.has(launchCode)) {
+          // Already exchanged in a prior run — session is in storage; make
+          // sure the launch param is gone and fall through to the session check.
+          if (typeof window !== "undefined" && new URL(window.location.href).searchParams.has("launch")) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("launch");
+            window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+          }
+        } else if (launchCode) {
+          exchangedLaunchCodes.add(launchCode);
           const exchangeResponse = await fetch("/api/auth/exchange-handoff", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
