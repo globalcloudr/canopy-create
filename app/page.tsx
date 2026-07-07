@@ -230,7 +230,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {/* Header */}
         <DashboardHero
           eyebrow="Canopy Create"
-          headline="My Work"
+          headline={<>Design requests, <span className="font-bold text-[var(--accent)]">handled</span>.</>}
           subheading={isEmpty ? "You have no active jobs." : `${jobs.length} active job${jobs.length === 1 ? "" : "s"}`}
           ctaLabel="New Job"
           ctaHref={newRequestHref}
@@ -497,7 +497,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <ClientShell activeNav="home">
       <DashboardHero
         eyebrow="Canopy Create"
-        headline="Overview"
+        headline={<>Design requests, <span className="font-bold text-[var(--accent)]">handled</span>.</>}
         subheading={workspaceId ? `${openRequests.length} open ${openRequests.length === 1 ? "request" : "requests"}, ${activeProjects.length} active ${activeProjects.length === 1 ? "project" : "projects"}` : undefined}
         ctaLabel="New Request"
         ctaHref={newRequestHref}
