@@ -231,7 +231,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <DashboardHero
           eyebrow="Canopy Create"
           headline={<>Design requests, <span className="font-bold text-[var(--accent)]">handled</span>.</>}
-          subheading={isEmpty ? "You have no active jobs." : `${jobs.length} active job${jobs.length === 1 ? "" : "s"}`}
+          subheading={`Request flyers, brochures, and graphics — then track them from idea to finished file.${isEmpty ? "" : ` ${jobs.length} active job${jobs.length === 1 ? "" : "s"}.`}`}
           ctaLabel="New Job"
           ctaHref={newRequestHref}
         />
@@ -498,7 +498,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <DashboardHero
         eyebrow="Canopy Create"
         headline={<>Design requests, <span className="font-bold text-[var(--accent)]">handled</span>.</>}
-        subheading={workspaceId ? `${openRequests.length} open ${openRequests.length === 1 ? "request" : "requests"}, ${activeProjects.length} active ${activeProjects.length === 1 ? "project" : "projects"}` : undefined}
+        subheading={`Design requests and projects across the workspace.${workspaceId ? ` ${openRequests.length} open ${openRequests.length === 1 ? "request" : "requests"}, ${activeProjects.length} active ${activeProjects.length === 1 ? "project" : "projects"}.` : ""}`}
         ctaLabel="New Request"
         ctaHref={newRequestHref}
       />
